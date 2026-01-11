@@ -321,13 +321,15 @@
                 </div>
                 <div class="rating-hint">0-10 (half stars)</div>
               </div>
-              <div class="field">
-                <label>Link</label>
-                <input v-model.trim="band.newBand.link" type="text" class="band-input" />
-              </div>
-              <div class="field">
-                <label>Website</label>
-                <input v-model.trim="band.newBand.website" type="text" class="band-input" />
+              <div class="grid band-row full-row">
+                <div class="field">
+                  <label>Plex Link</label>
+                  <input v-model.trim="band.newBand.link" type="text" class="band-input" />
+                </div>
+                <div class="field">
+                  <label>Website</label>
+                  <input v-model.trim="band.newBand.website" type="text" class="band-input" />
+                </div>
               </div>
               <div class="field full-row">
                 <label>Notes</label>
@@ -1112,6 +1114,10 @@ async function save() {
   min-height: 72px;
 }
 
+.band-row {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .modal-footer {
   display: flex;
   justify-content: flex-end;
@@ -1159,6 +1165,7 @@ async function save() {
   }
 }
 </style>
+
 
 
 
