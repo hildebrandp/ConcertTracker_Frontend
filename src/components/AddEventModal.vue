@@ -1,0 +1,854 @@
+<template>
+  <div v-if="open" class="backdrop" @click.self="$emit('close')">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <div class="title">Add concert event</div>
+        <button class="close" type="button" @click="$emit('close')">Close</button>
+      </div>
+
+      <form class="modal-body" @submit.prevent="save">
+        <div class="section">
+          <div class="section-title">Event</div>
+          <div class="field">
+            <label for="event-name">Name <span class="required">*</span></label>
+            <input id="event-name" v-model.trim="eventName" type="text" required />
+          </div>
+          <div class="field">
+            <label for="event-datetime">Date & time <span class="required">*</span></label>
+            <input
+              id="event-datetime"
+              v-model="eventDatetime"
+              type="datetime-local"
+              required
+            />
+          </div>
+          <div class="field">
+            <label for="event-rating">Rating</label>
+            <input
+              id="event-rating"
+              v-model="eventRating"
+              type="number"
+              min="0"
+              max="10"
+              placeholder="0-10"
+            />
+          </div>
+          <div class="field">
+            <label for="event-notes">Notes</label>
+            <textarea id="event-notes" v-model.trim="eventNotes" rows="3" />
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Venue</div>
+          <div class="field">
+            <label for="venue-search">Search venue <span v-if="!useNewVenue" class="required">*</span></label>
+            <input
+              id="venue-search"
+              v-model.trim="venueQuery"
+              type="text"
+              placeholder="Start typing a venue name..."
+              :disabled="useNewVenue"
+              @input="clearSelectedVenue"
+            />
+            <div v-if="!useNewVenue && venueMatches.length" class="suggestions">
+              <button
+                v-for="venue in venueMatches"
+                :key="venue.id"
+                type="button"
+                class="suggestion"
+                @click="selectVenue(venue)"
+              >
+                {{ venue.name }}
+              </button>
+            </div>
+            <div v-if="selectedVenueName && !useNewVenue" class="selected">
+              Selected: {{ selectedVenueName }}
+            </div>
+          </div>
+
+          <label class="checkbox">
+            <input v-model="useNewVenue" type="checkbox" />
+            Create new venue
+          </label>
+
+          <div v-if="useNewVenue" class="grid">
+            <div class="field">
+              <label for="venue-name">Name <span class="required">*</span></label>
+              <input id="venue-name" v-model.trim="venueForm.name" type="text" required />
+            </div>
+            <div class="field">
+              <label for="venue-address">Address</label>
+              <input id="venue-address" v-model.trim="venueForm.address" type="text" />
+            </div>
+            <div class="field">
+              <label for="venue-city">City</label>
+              <input id="venue-city" v-model.trim="venueForm.city" type="text" />
+            </div>
+            <div class="field">
+              <label for="venue-state">State</label>
+              <input id="venue-state" v-model.trim="venueForm.state" type="text" />
+            </div>
+            <div class="field">
+              <label for="venue-country">Country</label>
+              <input id="venue-country" v-model.trim="venueForm.country" type="text" />
+            </div>
+            <div class="field">
+              <label for="venue-postal">Postal code</label>
+              <input id="venue-postal" v-model.trim="venueForm.postal_code" type="text" />
+            </div>
+            <div class="field">
+              <label for="venue-type">Type</label>
+              <select id="venue-type" v-model="venueForm.type">
+                <option value="">Select...</option>
+                <option v-for="type in venueTypeOptions" :key="type" :value="type">
+                  {{ type }}
+                </option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="venue-indoor">Indoor/Outdoor</label>
+              <select id="venue-indoor" v-model="venueForm.indoor_outdoor">
+                <option value="">Select...</option>
+                <option value="indoor">Indoor</option>
+                <option value="outdoor">Outdoor</option>
+                <option value="mixed">Mixed</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="venue-capacity">Capacity</label>
+              <input id="venue-capacity" v-model.trim="venueForm.capacity" type="text" />
+            </div>
+            <div class="field">
+              <label for="venue-website">Website</label>
+              <input id="venue-website" v-model.trim="venueForm.website" type="text" />
+            </div>
+            <div class="field">
+              <label for="venue-notes">Notes</label>
+              <textarea id="venue-notes" v-model.trim="venueForm.notes" rows="2" />
+            </div>
+            <div class="field">
+              <label for="venue-latitude">Latitude</label>
+              <input id="venue-latitude" v-model.trim="venueForm.latitude" type="text" />
+            </div>
+            <div class="field">
+              <label for="venue-longitude">Longitude</label>
+              <input id="venue-longitude" v-model.trim="venueForm.longitude" type="text" />
+            </div>
+            <div class="field">
+              <label for="venue-rating">Rating</label>
+              <input id="venue-rating" v-model.trim="venueForm.rating" type="text" />
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Bands</div>
+
+          <div v-for="(band, index) in bandEntries" :key="band.localId" class="band-entry">
+            <div class="band-header">
+              <div class="field">
+                <label>Band <span class="required">*</span></label>
+                <input
+                  v-if="band.mode === 'existing'"
+                  v-model.trim="band.query"
+                  type="text"
+                  placeholder="Search band..."
+                  @input="clearSelectedBand(band)"
+                />
+                <input
+                  v-else
+                  v-model.trim="band.newBand.name"
+                  type="text"
+                  placeholder="Band name"
+                  class="band-name-input"
+                  required
+                />
+              </div>
+              <div class="band-actions">
+                <button type="button" class="secondary" @click="toggleBandMode(band)">
+                  {{ band.mode === "existing" ? "New band" : "Use existing" }}
+                </button>
+                <button
+                  v-if="bandEntries.length > 1"
+                  type="button"
+                  class="ghost"
+                  @click="removeBand(index)"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+
+            <div v-if="band.mode === 'existing' && bandMatches(band).length" class="suggestions">
+              <button
+                v-for="match in bandMatches(band)"
+                :key="match.id"
+                type="button"
+                class="suggestion"
+                @click="selectBand(band, match)"
+              >
+                {{ match.name }}
+              </button>
+            </div>
+            <div v-if="band.mode === 'existing' && band.selectedBandName" class="selected">
+              Selected: {{ band.selectedBandName }}
+            </div>
+
+            <div v-if="band.mode === 'new'" class="grid">
+              <div class="field">
+                <label>Genre</label>
+                <input v-model.trim="band.newBand.genre" type="text" class="band-input" />
+              </div>
+              <div class="field">
+                <label>Origin country</label>
+                <input v-model.trim="band.newBand.origin_country" type="text" class="band-input" />
+              </div>
+              <div class="field">
+                <label>Rating</label>
+                <input v-model.trim="band.newBand.rating" type="text" class="band-input" />
+              </div>
+              <div class="field">
+                <label>Notes</label>
+                <textarea v-model.trim="band.newBand.notes" rows="2" class="band-textarea" />
+              </div>
+              <div class="field">
+                <label>Link</label>
+                <input v-model.trim="band.newBand.link" type="text" class="band-input" />
+              </div>
+              <div class="field">
+                <label>Website</label>
+                <input v-model.trim="band.newBand.website" type="text" class="band-input" />
+              </div>
+            </div>
+          </div>
+
+          <button type="button" class="secondary" @click="addBand">
+            Add another band
+          </button>
+        </div>
+
+        <div v-if="loadError" class="error">
+          {{ loadError }}
+        </div>
+        <div v-if="error" class="error">
+          {{ error }}
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="ghost" @click="$emit('close')">Cancel</button>
+          <button type="submit" class="primary" :disabled="saving">
+            {{ saving ? "Saving..." : "Create event" }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed, ref, watch } from "vue";
+import type { ConcertBandDto, ConcertVenueDto } from "../api/types";
+import {
+  createConcertBand,
+  createConcertEvent,
+  createConcertVenue,
+  createEventBand,
+  getConcertBands,
+  getConcertVenues,
+} from "../api/concertsApi";
+
+const props = defineProps<{
+  open: boolean;
+}>();
+
+const emit = defineEmits<{
+  (e: "close"): void;
+  (e: "created"): void;
+}>();
+
+const venues = ref<ConcertVenueDto[]>([]);
+const bands = ref<ConcertBandDto[]>([]);
+const loaded = ref(false);
+const loading = ref(false);
+const loadError = ref<string | null>(null);
+
+const eventName = ref("");
+const eventDatetime = ref(defaultEventDatetime());
+const eventRating = ref("");
+const eventNotes = ref("");
+
+const venueQuery = ref("");
+const selectedVenueId = ref<number | null>(null);
+const selectedVenueName = ref("");
+const useNewVenue = ref(false);
+
+const venueForm = ref({
+  name: "",
+  address: "",
+  city: "",
+  state: "",
+  country: "",
+  postal_code: "",
+  type: "",
+  indoor_outdoor: "",
+  capacity: "",
+  website: "",
+  notes: "",
+  latitude: "",
+  longitude: "",
+  rating: "",
+});
+
+const venueTypeOptions = [
+  "Arena",
+  "Theater",
+  "Club",
+  "Concert Hall",
+  "Auditorium",
+  "Studio",
+  "Stadium",
+  "Amphitheater",
+  "Park",
+  "Plaza",
+  "Beach",
+  "Festival Grounds",
+  "Fairgrounds",
+  "Camping Site",
+  "Church or Cathedral",
+  "Cultural Center",
+  "Rooftop",
+  "Barn",
+  "Cruise Ship",
+  "Museum or Gallery",
+  "Warehouse",
+  "Castle or Fortress",
+  "Desert",
+  "Underground Cave",
+  "Airfield",
+];
+
+type BandEntry = {
+  localId: number;
+  mode: "existing" | "new";
+  query: string;
+  selectedBandId: number | null;
+  selectedBandName: string;
+  newBand: {
+    name: string;
+    genre: string;
+    origin_country: string;
+    rating: string;
+    notes: string;
+    link: string;
+    website: string;
+  };
+};
+
+let bandCounter = 0;
+
+const bandEntries = ref<BandEntry[]>([createBandEntry()]);
+
+const saving = ref(false);
+const error = ref<string | null>(null);
+
+const venueMatches = computed(() => {
+  const q = venueQuery.value.trim().toLowerCase();
+  if (!q) return [];
+  return venues.value
+    .filter((venue) => venue.name.toLowerCase().includes(q))
+    .slice(0, 6);
+});
+
+watch(
+  () => props.open,
+  async (isOpen) => {
+    if (!isOpen) {
+      return;
+    }
+
+    resetForm();
+    await ensureLookups();
+  }
+);
+
+async function ensureLookups() {
+  if (loaded.value || loading.value) {
+    return;
+  }
+
+  loading.value = true;
+  loadError.value = null;
+
+  try {
+    const [venueList, bandList] = await Promise.all([
+      getConcertVenues(),
+      getConcertBands(),
+    ]);
+    venues.value = venueList;
+    bands.value = bandList;
+    loaded.value = true;
+  } catch (e: any) {
+    loadError.value = e?.message ?? "Failed to load venues and bands.";
+  } finally {
+    loading.value = false;
+  }
+}
+
+function defaultEventDatetime() {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}T19:00`;
+}
+function resetForm() {
+  eventName.value = "";
+  eventDatetime.value = defaultEventDatetime();
+  eventRating.value = "";
+  eventNotes.value = "";
+  venueQuery.value = "";
+  selectedVenueId.value = null;
+  selectedVenueName.value = "";
+  useNewVenue.value = false;
+  venueForm.value = {
+    name: "",
+    address: "",
+    city: "",
+    state: "",
+    country: "",
+    postal_code: "",
+    type: "",
+    indoor_outdoor: "",
+    capacity: "",
+    website: "",
+    notes: "",
+    latitude: "",
+    longitude: "",
+    rating: "",
+  };
+  bandEntries.value = [createBandEntry()];
+  error.value = null;
+}
+
+function createBandEntry(): BandEntry {
+  bandCounter += 1;
+  return {
+    localId: bandCounter,
+    mode: "existing",
+    query: "",
+    selectedBandId: null,
+    selectedBandName: "",
+    newBand: {
+      name: "",
+      genre: "",
+      origin_country: "",
+      rating: "",
+      notes: "",
+      link: "",
+      website: "",
+    },
+  };
+}
+
+function addBand() {
+  bandEntries.value.push(createBandEntry());
+}
+
+function removeBand(index: number) {
+  bandEntries.value.splice(index, 1);
+}
+
+function toggleBandMode(entry: BandEntry) {
+  entry.mode = entry.mode === "existing" ? "new" : "existing";
+  entry.selectedBandId = null;
+  entry.selectedBandName = "";
+  entry.query = "";
+  entry.newBand = {
+    name: "",
+    genre: "",
+    origin_country: "",
+    rating: "",
+    notes: "",
+    link: "",
+    website: "",
+  };
+}
+
+function bandMatches(entry: BandEntry) {
+  const q = entry.query.trim().toLowerCase();
+  if (!q) return [];
+  return bands.value
+    .filter((band) => band.name.toLowerCase().includes(q))
+    .slice(0, 6);
+}
+
+function selectBand(entry: BandEntry, band: ConcertBandDto) {
+  entry.selectedBandId = band.id;
+  entry.selectedBandName = band.name;
+  entry.query = band.name;
+}
+
+function clearSelectedBand(entry: BandEntry) {
+  entry.selectedBandId = null;
+  entry.selectedBandName = "";
+}
+
+function selectVenue(venue: ConcertVenueDto) {
+  selectedVenueId.value = venue.id;
+  selectedVenueName.value = venue.name;
+  venueQuery.value = venue.name;
+}
+
+function clearSelectedVenue() {
+  selectedVenueId.value = null;
+  selectedVenueName.value = "";
+}
+
+function toSqlDatetime(value: string) {
+  if (!value) return value;
+  const [date, time] = value.split("T");
+  if (!time) return value;
+  const normalizedTime = time.length === 5 ? `${time}:00` : time;
+  return `${date} ${normalizedTime}`;
+}
+
+function toText(value: unknown) {
+  if (value === null || value === undefined) return "";
+  return typeof value === "string" ? value : String(value);
+}
+
+function valueOrEmptyString(value: unknown) {
+  const trimmed = toText(value).trim();
+  return trimmed === "" ? "" : trimmed;
+}
+
+function numberOrZero(value: unknown) {
+  const trimmed = toText(value).trim();
+  if (trimmed === "") return 0;
+  const num = Number(trimmed);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function validateForm() {
+  if (!eventName.value.trim()) {
+    return "Event name is required.";
+  }
+  if (!eventDatetime.value) {
+    return "Event date and time is required.";
+  }
+  if (useNewVenue.value) {
+    if (!venueForm.value.name.trim()) {
+      return "Venue name is required.";
+    }
+  } else if (!selectedVenueId.value) {
+    return "Please select an existing venue or create a new one.";
+  }
+
+  const validBands = bandEntries.value.filter((entry) => {
+    if (entry.mode === "existing") {
+      return !!entry.selectedBandId;
+    }
+    return !!entry.newBand.name.trim();
+  });
+
+  if (validBands.length === 0) {
+    return "At least one band is required.";
+  }
+
+  return null;
+}
+
+async function save() {
+  const validationError = validateForm();
+  if (validationError) {
+    error.value = validationError;
+    return;
+  }
+
+  error.value = null;
+  saving.value = true;
+
+  try {
+    let venueId = selectedVenueId.value;
+    if (useNewVenue.value) {
+      venueId = await createConcertVenue({
+        name: venueForm.value.name.trim(),
+        address: valueOrEmptyString(venueForm.value.address),
+        city: valueOrEmptyString(venueForm.value.city),
+        state: valueOrEmptyString(venueForm.value.state),
+        country: valueOrEmptyString(venueForm.value.country),
+        postal_code: numberOrZero(venueForm.value.postal_code),
+        type: valueOrEmptyString(venueForm.value.type),
+        indoor_outdoor: valueOrEmptyString(venueForm.value.indoor_outdoor) as
+          | "indoor"
+          | "outdoor"
+          | "mixed"
+          | null,
+        capacity: numberOrZero(venueForm.value.capacity),
+        website: valueOrEmptyString(venueForm.value.website),
+        notes: valueOrEmptyString(venueForm.value.notes),
+        latitude: valueOrEmptyString(venueForm.value.latitude),
+        longitude: valueOrEmptyString(venueForm.value.longitude),
+        rating: numberOrZero(venueForm.value.rating),
+      });
+    }
+
+    if (!venueId) {
+      throw new Error("Missing venue selection.");
+    }
+
+    const bandIds: number[] = [];
+    for (const entry of bandEntries.value) {
+      if (entry.mode === "existing") {
+        if (entry.selectedBandId) {
+          bandIds.push(entry.selectedBandId);
+        }
+      } else if (entry.newBand.name.trim()) {
+        const newBandId = await createConcertBand({
+          name: entry.newBand.name.trim(),
+          genre: valueOrEmptyString(entry.newBand.genre),
+          origin_country: valueOrEmptyString(entry.newBand.origin_country),
+          rating: numberOrZero(entry.newBand.rating),
+          notes: valueOrEmptyString(entry.newBand.notes),
+          link: valueOrEmptyString(entry.newBand.link),
+          website: valueOrEmptyString(entry.newBand.website),
+        });
+        bandIds.push(newBandId);
+      }
+    }
+
+    const eventId = await createConcertEvent({
+      name: eventName.value.trim(),
+      datetime: toSqlDatetime(eventDatetime.value),
+      venue_id: venueId,
+      rating: numberOrZero(eventRating.value),
+      notes: valueOrEmptyString(eventNotes.value),
+    });
+
+    await Promise.all(
+      bandIds.map((bandId) =>
+        createEventBand({ event_id: eventId, band_id: bandId })
+      )
+    );
+
+    emit("created");
+    emit("close");
+  } catch (e: any) {
+    error.value = e?.message ?? "Failed to create event.";
+  } finally {
+    saving.value = false;
+  }
+}
+</script>
+
+<style scoped>
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 18px;
+}
+
+.modal {
+  width: min(900px, 100%);
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  overflow: hidden;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.close {
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background: #fff;
+  border-radius: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.modal-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: auto;
+}
+
+.section {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.section-title {
+  font-weight: 700;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field input,
+.field textarea,
+.field select {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  font-size: 14px;
+}
+
+.required {
+  color: #c62828;
+  font-size: 12px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.suggestion {
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background: #fff;
+  padding: 6px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.selected {
+  margin-top: 6px;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.band-entry {
+  border: 1px dashed rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.band-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.band-header .field {
+  flex: 1;
+  min-width: 320px;
+}
+
+.band-name-input {
+  width: 100%;
+}
+
+.band-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.band-input {
+  padding: 16px 10px;
+}
+
+.band-textarea {
+  padding: 16px 10px;
+  min-height: 72px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.primary {
+  background: #111;
+  color: #fff;
+  border: 1px solid #111;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.secondary,
+.ghost {
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background: #fff;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.error {
+  border: 1px solid rgba(180, 0, 0, 0.35);
+  background: rgba(180, 0, 0, 0.06);
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+
+@media (max-width: 720px) {
+  .modal {
+    width: 100%;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+  }
+
+  .primary,
+  .secondary,
+  .ghost {
+    width: 100%;
+  }
+}
+</style>
+
+
+
