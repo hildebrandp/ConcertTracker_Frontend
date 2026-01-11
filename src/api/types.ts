@@ -31,6 +31,7 @@ export interface ConcertEventDto {
 export interface ConcertVenueDto {
   id: number;
   name: string;
+  rating?: number | null;
 }
 
 export interface EventBandsDto {
@@ -51,6 +52,14 @@ export interface EventBandSummaryDto {
   date: string; // ISO date
   band_name: string;
   venue_name?: string | null;
+  rating?: number | null;
+}
+
+export interface VenueSummaryDto {
+  venue_id: number;
+  venue_name: string;
+  last_visited_date?: string | null;
+  visit_count: number;
   rating?: number | null;
 }
 export interface ConcertBandDto {
@@ -126,4 +135,3 @@ export interface ConcertDetailsDto {
     displayName: string;
   }>;
 }
-

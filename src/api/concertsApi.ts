@@ -70,6 +70,11 @@ const mockEventBandSummaries: EventBandSummaryDto[] = [
   },
 ];
 
+const mockVenues: ConcertVenueDto[] = [
+  { id: 1, name: "Some Arena", rating: 8 },
+  { id: 2, name: "Steel Hall", rating: 7 },
+];
+
 const mockBandDetailsById: Record<number, ConcertBandDetailsDto> = {
   1: {
     id: 1,
@@ -281,7 +286,7 @@ export async function getConcertDetails(concertId: number): Promise<ConcertDetai
 export async function getConcertVenues(): Promise<ConcertVenueDto[]> {
   if (USE_MOCK) {
     await sleep(100);
-    return [];
+    return mockVenues;
   }
 
   const res = await http.get<ConcertVenueDto[]>("/concertVenues");

@@ -15,10 +15,11 @@
       @show-all-concerts="openAllConcerts"
       @show-all-bands="openAllBands"
       @show-all-acts="openAllActs"
+      @show-all-venues="openAllVenues"
     />
 
     <ConcertsTable
-      v-if="!allConcertsOpen && !allBandsOpen && !allActsOpen"
+      v-if="!allConcertsOpen && !allBandsOpen && !allActsOpen && !allVenuesOpen"
       :concerts="concerts"
       @select="openDetails"
     />
@@ -192,6 +193,25 @@
       </div>
     </div>
 
+    <div v-else-if="allVenuesOpen" class="all-concerts">
+      <div class="all-header">
+        <button class="secondary" type="button" @click="closeAllVenues">
+          Back to dashboard
+        </button>
+        <div v-if="allVenuesLoading" class="hint">Loading venues...</div>
+      </div>
+
+      <VenuesTable
+        :venues="allVenues"
+        title="Total venues visited"
+        hint="Showing all visited venues"
+      />
+
+      <div v-if="allVenuesError" class="error">
+        {{ allVenuesError }}
+      </div>
+    </div>
+
     <ConcertDetailsModal
       :open="detailsOpen"
       :details="selectedDetails"
@@ -224,6 +244,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import StatsRow from "../components/StatsRow.vue";
 import ConcertsTable from "../components/ConcertsTable.vue";
 import BandsTable from "../components/BandsTable.vue";
+import VenuesTable from "../components/VenuesTable.vue";
 import BandDetailsModal from "../components/BandDetailsModal.vue";
 import EventBandsTable from "../components/EventBandsTable.vue";
 import ConcertDetailsModal from "../components/ConcertDetailsModal.vue";
@@ -234,6 +255,7 @@ import {
   getConcertBands,
   getConcertBandById,
   getConcertDetails,
+  getConcertVenues,
   getEventBandSummaries,
   getLastConcerts,
   getStats,
@@ -245,9 +267,11 @@ import type {
   ConcertBandDetailsDto,
   ConcertDetailsDto,
   ConcertListItemDto,
+  ConcertVenueDto,
   CreateConcertBandDto,
   EventBandSummaryDto,
   StatsDto,
+  VenueSummaryDto,
 } from "../api/types";
 
 const stats = ref<StatsDto | null>(null);
@@ -275,6 +299,10 @@ const actsPageSizeOptions = ["10", "20", "50", "100", "200", "All"] as const;
 const actsPageSize = ref<(typeof actsPageSizeOptions)[number]>("20");
 const actsPage = ref(1);
 const actsSearch = ref("");
+const allVenues = ref<VenueSummaryDto[]>([]);
+const allVenuesOpen = ref(false);
+const allVenuesLoading = ref(false);
+const allVenuesError = ref<string | null>(null);
 
 const detailsOpen = ref(false);
 const selectedDetails = ref<ConcertDetailsDto | null>(null);
@@ -304,6 +332,7 @@ async function openAllConcerts() {
   allConcertsOpen.value = true;
   allBandsOpen.value = false;
   allActsOpen.value = false;
+  allVenuesOpen.value = false;
   if (allConcerts.value.length === 0) {
     await loadAllConcerts();
   }
@@ -330,6 +359,7 @@ async function openAllBands() {
   allBandsOpen.value = true;
   allConcertsOpen.value = false;
   allActsOpen.value = false;
+  allVenuesOpen.value = false;
   if (allBands.value.length === 0) {
     await loadAllBands();
   }
@@ -352,10 +382,87 @@ async function loadAllActs() {
   }
 }
 
+function buildVenueSummaries(
+  venues: ConcertVenueDto[],
+  concertsData: ConcertListItemDto[]
+): VenueSummaryDto[] {
+  const statsByVenue = new Map<
+    number,
+    { count: number; lastDate?: string; lastVenueName?: string }
+  >();
+
+  for (const concert of concertsData) {
+    if (!concert.venueId) continue;
+    const date = concert.date;
+    const entry = statsByVenue.get(concert.venueId) ?? { count: 0 };
+    entry.count += 1;
+    if (!entry.lastDate || date > entry.lastDate) {
+      entry.lastDate = date;
+      if (concert.venueName) {
+        entry.lastVenueName = concert.venueName;
+      }
+    } else if (!entry.lastVenueName && concert.venueName) {
+      entry.lastVenueName = concert.venueName;
+    }
+    statsByVenue.set(concert.venueId, entry);
+  }
+
+  const summaries: VenueSummaryDto[] = [];
+
+  for (const venue of venues) {
+    const stats = statsByVenue.get(venue.id);
+    if (!stats) continue;
+    summaries.push({
+      venue_id: venue.id,
+      venue_name: venue.name,
+      last_visited_date: stats.lastDate ?? null,
+      visit_count: stats.count,
+      rating: venue.rating ?? null,
+    });
+    statsByVenue.delete(venue.id);
+  }
+
+  for (const [venueId, stats] of statsByVenue) {
+    summaries.push({
+      venue_id: venueId,
+      venue_name: stats.lastVenueName ?? `Venue #${venueId}`,
+      last_visited_date: stats.lastDate ?? null,
+      visit_count: stats.count,
+      rating: null,
+    });
+  }
+
+  summaries.sort((a, b) => (b.last_visited_date ?? "").localeCompare(a.last_visited_date ?? ""));
+  return summaries;
+}
+
+async function loadAllVenues() {
+  allVenuesLoading.value = true;
+  allVenuesError.value = null;
+
+  try {
+    const [venues, concertsData] = await Promise.all([
+      getConcertVenues(),
+      allConcerts.value.length === 0 ? getAllConcerts() : Promise.resolve(allConcerts.value),
+    ]);
+
+    if (allConcerts.value.length === 0) {
+      allConcerts.value = concertsData;
+    }
+
+    allVenues.value = buildVenueSummaries(venues, concertsData);
+  } catch (e: any) {
+    allVenuesError.value = e?.message ?? "Failed to load venues.";
+  } finally {
+    allVenuesLoading.value = false;
+  }
+}
+
 async function openAllActs() {
   allActsOpen.value = true;
   allConcertsOpen.value = false;
   allBandsOpen.value = false;
+  allVenuesOpen.value = false;
   if (allActs.value.length === 0) {
     await loadAllActs();
   }
@@ -363,6 +470,20 @@ async function openAllActs() {
 
 function closeAllActs() {
   allActsOpen.value = false;
+}
+
+async function openAllVenues() {
+  allVenuesOpen.value = true;
+  allConcertsOpen.value = false;
+  allBandsOpen.value = false;
+  allActsOpen.value = false;
+  if (allVenues.value.length === 0) {
+    await loadAllVenues();
+  }
+}
+
+function closeAllVenues() {
+  allVenuesOpen.value = false;
 }
 
 const isAllPages = computed(() => pageSize.value === "All");
@@ -518,6 +639,9 @@ async function refreshData() {
   }
   if (allActsOpen.value || allActs.value.length > 0) {
     await loadAllActs();
+  }
+  if (allVenuesOpen.value || allVenues.value.length > 0) {
+    await loadAllVenues();
   }
 }
 

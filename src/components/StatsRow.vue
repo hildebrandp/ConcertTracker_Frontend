@@ -15,7 +15,7 @@
       <div class="stat-value">{{ stats?.actsSeen ?? "-" }}</div>
     </button>
 
-    <button type="button" class="stat-card clickable">
+    <button type="button" class="stat-card clickable" @click="$emit('show-all-venues')">
       <div class="stat-label">Total Venues visited</div>
       <div class="stat-value">{{ stats?.venuesSeen ?? "-" }}</div>
     </button>
@@ -33,6 +33,7 @@ defineEmits<{
   (e: "show-all-concerts"): void;
   (e: "show-all-bands"): void;
   (e: "show-all-acts"): void;
+  (e: "show-all-venues"): void;
 }>();
 </script>
 
@@ -76,6 +77,5 @@ defineEmits<{
   letter-spacing: 0.2px;
 }
 </style>
-
 
 
