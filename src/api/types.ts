@@ -134,6 +134,33 @@ export interface CreateConcertBandDto {
 export interface CreateEventBandDto {
   event_id: number;
   band_id: number;
+  main_act?: boolean;
+  running_order?: number;
+}
+
+export interface CreateEventBandEntryDto {
+  bandId?: number;
+  band?: CreateConcertBandDto;
+  mainAct?: boolean;
+  runningOrder?: number;
+  rating?: number | null;
+  notes?: string | null;
+  setlist?: Record<string, unknown>;
+}
+
+export interface CreateConcertEventBundleDto {
+  event: Omit<CreateConcertEventDto, "venue_id">;
+  venueId?: number;
+  venue?: CreateConcertVenueDto;
+  bands: CreateEventBandEntryDto[];
+}
+
+export interface CreateConcertEventBundleResponseDto {
+  message: string;
+  eventId: number;
+  venueId: number;
+  bandIds: number[];
+  eventBandIds: number[];
 }
 
 export interface ConcertDetailsDto {

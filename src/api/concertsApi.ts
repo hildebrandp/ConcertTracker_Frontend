@@ -12,6 +12,8 @@ import type {
   CreateConcertBandDto,
   CreateConcertEventDto,
   CreateConcertVenueDto,
+  CreateConcertEventBundleDto,
+  CreateConcertEventBundleResponseDto,
   CreateEventBandDto,
   StatsDto,
   EventBandsDto,
@@ -474,6 +476,27 @@ export async function createConcertEvent(payload: CreateConcertEventDto): Promis
   return eventId;
 }
 
+export async function createConcertEventWithBands(
+  payload: CreateConcertEventBundleDto
+): Promise<CreateConcertEventBundleResponseDto> {
+  if (USE_MOCK) {
+    await sleep(120);
+    return {
+      message: "Concert-Event bundle created successfully",
+      eventId: Date.now(),
+      venueId: payload.venueId ?? Date.now() + 1,
+      bandIds: payload.bands.map((_, index) => Date.now() + 2 + index),
+      eventBandIds: payload.bands.map((_, index) => Date.now() + 100 + index),
+    };
+  }
+
+  const res = await http.post<CreateConcertEventBundleResponseDto>(
+    "/concertEvents/withBands",
+    payload
+  );
+  return res.data;
+}
+
 export async function createEventBand(payload: CreateEventBandDto): Promise<void> {
   if (USE_MOCK) {
     await sleep(50);
@@ -484,5 +507,7 @@ export async function createEventBand(payload: CreateEventBandDto): Promise<void
     ...payload,
     eventId: payload.event_id,
     bandId: payload.band_id,
+    mainAct: payload.main_act,
+    runningOrder: payload.running_order,
   });
 }

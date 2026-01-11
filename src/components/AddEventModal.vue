@@ -249,6 +249,10 @@
                   required
                 />
               </div>
+              <label class="band-flag">
+                <input v-model="band.mainAct" type="checkbox" />
+                Main act
+              </label>
               <div class="band-actions">
                 <button type="button" class="secondary" @click="toggleBandMode(band)">
                   {{ band.mode === "existing" ? "New band" : "Use existing" }}
@@ -386,10 +390,7 @@
 import { computed, ref, watch } from "vue";
 import type { ConcertBandDto, ConcertVenueDto } from "../api/types";
 import {
-  createConcertBand,
-  createConcertEvent,
-  createConcertVenue,
-  createEventBand,
+  createConcertEventWithBands,
   getConcertBands,
   getConcertVenues,
 } from "../api/concertsApi";
@@ -473,6 +474,7 @@ type BandEntry = {
   query: string;
   selectedBandId: number | null;
   selectedBandName: string;
+  mainAct: boolean;
   newBand: {
     name: string;
     genre: string;
@@ -604,6 +606,7 @@ function createBandEntry(): BandEntry {
     query: "",
     selectedBandId: null,
     selectedBandName: "",
+    mainAct: false,
     newBand: {
       name: "",
       genre: "",
@@ -819,44 +822,54 @@ async function save() {
   saving.value = true;
 
   try {
-    let venueId = selectedVenueId.value;
-    if (useNewVenue.value) {
-      const venuePayload = {
-        name: venueForm.value.name.trim(),
-        address: valueOrUndefined(venueForm.value.address),
-        city: valueOrUndefined(venueForm.value.city),
-        state: valueOrUndefined(venueForm.value.state),
-        country: valueOrUndefined(venueForm.value.country),
-        postal_code: numberOrZero(venueForm.value.postal_code),
-        type: valueOrUndefined(venueForm.value.type),
-        indoor_outdoor: valueOrUndefined(venueForm.value.indoor_outdoor) as
-          | "indoor"
-          | "outdoor"
-          | "mixed"
-          | undefined,
-        capacity: numberOrZero(venueForm.value.capacity),
-        website: valueOrUndefined(venueForm.value.website),
-        notes: valueOrUndefined(venueForm.value.notes),
-        latitude: valueOrUndefined(venueForm.value.latitude),
-        longitude: valueOrUndefined(venueForm.value.longitude),
-        rating: numberOrZero(venueForm.value.rating),
+    const venuePayload = useNewVenue.value
+      ? {
+          name: venueForm.value.name.trim(),
+          address: valueOrUndefined(venueForm.value.address),
+          city: valueOrUndefined(venueForm.value.city),
+          state: valueOrUndefined(venueForm.value.state),
+          country: valueOrUndefined(venueForm.value.country),
+          postal_code: numberOrZero(venueForm.value.postal_code),
+          type: valueOrUndefined(venueForm.value.type),
+          indoor_outdoor: valueOrUndefined(venueForm.value.indoor_outdoor) as
+            | "indoor"
+            | "outdoor"
+            | "mixed"
+            | undefined,
+          capacity: numberOrZero(venueForm.value.capacity),
+          website: valueOrUndefined(venueForm.value.website),
+          notes: valueOrUndefined(venueForm.value.notes),
+          latitude: valueOrUndefined(venueForm.value.latitude),
+          longitude: valueOrUndefined(venueForm.value.longitude),
+          rating: numberOrZero(venueForm.value.rating),
+        }
+      : null;
+
+    const bandsPayload: Array<{
+      bandId?: number;
+      band?: {
+        name: string;
+        genre?: string;
+        origin_country?: string;
+        rating?: number;
+        notes?: string;
+        link?: string;
+        website?: string;
       };
-      venueId = await createConcertVenue(
-        Object.fromEntries(
-          Object.entries(venuePayload).filter(([, value]) => value !== undefined)
-        ) as typeof venuePayload
-      );
-    }
+      mainAct: boolean;
+      runningOrder: number;
+    }> = [];
 
-    if (!venueId) {
-      throw new Error("Missing venue selection.");
-    }
-
-    const bandIds: number[] = [];
+    let runningOrder = 1;
     for (const entry of bandEntries.value) {
       if (entry.mode === "existing") {
         if (entry.selectedBandId) {
-          bandIds.push(entry.selectedBandId);
+          bandsPayload.push({
+            bandId: entry.selectedBandId,
+            mainAct: entry.mainAct,
+            runningOrder,
+          });
+          runningOrder += 1;
         }
       } else if (entry.newBand.name.trim()) {
         const bandPayload = {
@@ -868,28 +881,35 @@ async function save() {
           link: valueOrUndefined(entry.newBand.link),
           website: valueOrUndefined(entry.newBand.website),
         };
-        const newBandId = await createConcertBand(
-          Object.fromEntries(
+        bandsPayload.push({
+          band: Object.fromEntries(
             Object.entries(bandPayload).filter(([, value]) => value !== undefined)
-          ) as typeof bandPayload
-        );
-        bandIds.push(newBandId);
+          ) as typeof bandPayload,
+          mainAct: entry.mainAct,
+          runningOrder,
+        });
+        runningOrder += 1;
       }
     }
 
-    const eventId = await createConcertEvent({
-      name: eventName.value.trim(),
-      datetime: toSqlDatetime(eventDatetime.value),
-      venue_id: venueId,
-      rating: numberOrZero(eventRating.value),
-      notes: valueOrEmptyString(eventNotes.value),
-    });
+    const payload = {
+      event: {
+        name: eventName.value.trim(),
+        datetime: toSqlDatetime(eventDatetime.value),
+        rating: numberOrZero(eventRating.value),
+        notes: valueOrEmptyString(eventNotes.value),
+      },
+      bands: bandsPayload,
+      ...(useNewVenue.value
+        ? {
+            venue: Object.fromEntries(
+              Object.entries(venuePayload ?? {}).filter(([, value]) => value !== undefined)
+            ),
+          }
+        : { venueId: selectedVenueId.value }),
+    };
 
-    await Promise.all(
-      bandIds.map((bandId) =>
-        createEventBand({ event_id: eventId, band_id: bandId })
-      )
-    );
+    await createConcertEventWithBands(payload);
 
     emit("created");
     emit("close");
@@ -1163,6 +1183,13 @@ async function save() {
   gap: 8px;
 }
 
+.band-flag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
 .band-input {
   padding: 16px 10px;
 }
@@ -1223,9 +1250,6 @@ async function save() {
   }
 }
 </style>
-
-
-
 
 
 
