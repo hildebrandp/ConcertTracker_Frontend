@@ -59,7 +59,12 @@
           </div>
           <div class="field">
             <label for="event-notes">Notes</label>
-            <textarea id="event-notes" v-model.trim="eventNotes" rows="3" />
+            <textarea
+              id="event-notes"
+              v-model.trim="eventNotes"
+              rows="2"
+              class="event-notes"
+            />
           </div>
         </div>
 
@@ -172,28 +177,30 @@
             </div>
 
             <div class="venue-section">
-              <div class="venue-section-title">Address</div>
+              <div class="venue-section-title">Venue Address</div>
               <div class="grid venue-address">
                 <div class="field">
                   <label for="venue-address">Address</label>
                   <input id="venue-address" v-model.trim="venueForm.address" type="text" />
                 </div>
                 <div class="field">
-                  <label for="venue-city">City</label>
-                  <input id="venue-city" v-model.trim="venueForm.city" type="text" />
+                  <label for="venue-postal">Postal code</label>
+                  <input id="venue-postal" v-model.trim="venueForm.postal_code" type="text" />
                 </div>
                 <div class="field">
-                  <label for="venue-state">State</label>
-                  <input id="venue-state" v-model.trim="venueForm.state" type="text" />
+                  <label for="venue-city">City</label>
+                  <input id="venue-city" v-model.trim="venueForm.city" type="text" />
                 </div>
                 <div class="field">
                   <label for="venue-country">Country</label>
                   <input id="venue-country" v-model.trim="venueForm.country" type="text" />
                 </div>
                 <div class="field">
-                  <label for="venue-postal">Postal code</label>
-                  <input id="venue-postal" v-model.trim="venueForm.postal_code" type="text" />
+                  <label for="venue-state">State</label>
+                  <input id="venue-state" v-model.trim="venueForm.state" type="text" />
                 </div>
+              </div>
+              <div class="grid venue-row">
                 <div class="field">
                   <label for="venue-latitude">Latitude</label>
                   <input id="venue-latitude" v-model.trim="venueForm.latitude" type="text" />
@@ -208,7 +215,12 @@
             <div class="grid venue-row">
               <div class="field full-row">
                 <label for="venue-notes">Notes</label>
-                <textarea id="venue-notes" v-model.trim="venueForm.notes" rows="2" />
+                <textarea
+                  id="venue-notes"
+                  v-model.trim="venueForm.notes"
+                  rows="2"
+                  class="venue-notes"
+                />
               </div>
             </div>
           </div>
@@ -319,7 +331,11 @@
               </div>
               <div class="field full-row">
                 <label>Notes</label>
-                <textarea v-model.trim="band.newBand.notes" rows="2" class="band-textarea" />
+                <textarea
+                  v-model.trim="band.newBand.notes"
+                  rows="2"
+                  class="band-textarea band-notes"
+                />
               </div>
             </div>
           </div>
@@ -969,6 +985,17 @@ async function save() {
   color: rgba(0, 0, 0, 0.55);
 }
 
+.event-notes {
+  resize: vertical;
+  min-height: 48px;
+}
+
+.venue-notes,
+.band-notes {
+  resize: vertical;
+  min-height: 48px;
+}
+
 .required {
   color: #c62828;
   font-size: 12px;
@@ -1132,7 +1159,6 @@ async function save() {
   }
 }
 </style>
-
 
 
 
