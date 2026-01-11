@@ -186,6 +186,7 @@ export interface ConcertDetailsDto {
     name: string;
     mainAct?: boolean | null;
     runningOrder?: number | null;
+    rating?: number | null;
   }>;
 
   participatedWith: Array<{

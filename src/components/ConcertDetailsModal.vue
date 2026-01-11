@@ -40,7 +40,10 @@
           <div class="section">
             <div class="section-title">Main Act</div>
             <ul class="list">
-              <li v-for="b in mainActs" :key="b.id">{{ b.name }}</li>
+              <li v-for="b in mainActs" :key="b.id" class="band-item">
+                <span>{{ b.name }}</span>
+                <span class="band-rating">{{ b.rating ?? "-" }}</span>
+              </li>
               <li v-if="mainActs.length === 0" class="muted">No main acts recorded.</li>
             </ul>
           </div>
@@ -48,7 +51,10 @@
           <div class="section">
             <div class="section-title">Supporters</div>
             <ul class="list">
-              <li v-for="b in supporters" :key="b.id">{{ b.name }}</li>
+              <li v-for="b in supporters" :key="b.id" class="band-item">
+                <span>{{ b.name }}</span>
+                <span class="band-rating">{{ b.rating ?? "-" }}</span>
+              </li>
               <li v-if="supporters.length === 0" class="muted">No supporters recorded.</li>
             </ul>
           </div>
@@ -232,6 +238,22 @@ function starFillValue(starIndex: number, rating: number) {
 .list {
   margin: 0;
   padding-left: 16px;
+}
+
+.band-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.band-rating {
+  min-width: 36px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  text-align: center;
+  font-size: 12px;
 }
 
 .muted {

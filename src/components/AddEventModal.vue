@@ -299,6 +299,40 @@
               Selected: {{ band.selectedBandName }}
             </div>
 
+            <div class="field band-rating">
+              <label>Performance rating</label>
+              <div
+                class="star-rating"
+                role="radiogroup"
+                aria-label="Event band rating"
+                @mouseleave="clearBandHover(band)"
+              >
+                <span v-for="star in 5" :key="star" class="star">
+                  <span class="star-icon" :style="{ '--fill': `${bandStarFill(band, star)}%` }">
+                    &#9733;
+                  </span>
+                  <button
+                    type="button"
+                    class="half left"
+                    :aria-label="`Set rating to ${star * 2 - 1}`"
+                    @click="setBandRating(band, star * 2 - 1)"
+                    @mouseenter="setBandHover(band, star * 2 - 1)"
+                  ></button>
+                  <button
+                    type="button"
+                    class="half right"
+                    :aria-label="`Set rating to ${star * 2}`"
+                    @click="setBandRating(band, star * 2)"
+                    @mouseenter="setBandHover(band, star * 2)"
+                  ></button>
+                </span>
+                <button type="button" class="star-clear" @click="setBandRating(band, 0)">
+                  Clear
+                </button>
+              </div>
+              <div class="rating-hint">0-10 (half stars)</div>
+            </div>
+
             <div v-if="band.mode === 'new'" class="grid">
               <div class="field">
                 <label>Genre</label>
@@ -317,39 +351,6 @@
                   class="band-input"
                   list="band-origin-options"
                 />
-              </div>
-              <div class="field">
-                <label>Rating</label>
-                <div
-                  class="star-rating"
-                  role="radiogroup"
-                  aria-label="Band rating"
-                  @mouseleave="clearBandHover(band)"
-                >
-                  <span v-for="star in 5" :key="star" class="star">
-                    <span class="star-icon" :style="{ '--fill': `${bandStarFill(band, star)}%` }">
-                    &#9733;
-                  </span>
-                    <button
-                      type="button"
-                      class="half left"
-                      :aria-label="`Set rating to ${star * 2 - 1}`"
-                      @click="setBandRating(band, star * 2 - 1)"
-                      @mouseenter="setBandHover(band, star * 2 - 1)"
-                    ></button>
-                    <button
-                      type="button"
-                      class="half right"
-                      :aria-label="`Set rating to ${star * 2}`"
-                      @click="setBandRating(band, star * 2)"
-                      @mouseenter="setBandHover(band, star * 2)"
-                    ></button>
-                  </span>
-                  <button type="button" class="star-clear" @click="setBandRating(band, 0)">
-                    Clear
-                  </button>
-                </div>
-                <div class="rating-hint">0-10 (half stars)</div>
               </div>
               <div class="grid band-row full-row">
                 <div class="field">
@@ -505,11 +506,11 @@ type BandEntry = {
   selectedBandId: number | null;
   selectedBandName: string;
   mainAct: boolean;
+  eventRating: string;
   newBand: {
     name: string;
     genre: string;
     origin_country: string;
-    rating: string;
     notes: string;
     link: string;
     website: string;
@@ -636,6 +637,9 @@ async function loadEventForEdit(eventId: number) {
         entry.selectedBandId = band.band_id ?? null;
         entry.selectedBandName = band.band_name ?? "";
         entry.mainAct = Boolean(band.mainAct);
+        entry.eventRating = band.rating !== null && band.rating !== undefined
+          ? String(band.rating)
+          : "";
         return entry;
       });
     }
@@ -690,11 +694,11 @@ function createBandEntry(): BandEntry {
     selectedBandId: null,
     selectedBandName: "",
     mainAct: false,
+    eventRating: "",
     newBand: {
       name: "",
       genre: "",
       origin_country: "",
-      rating: "",
       notes: "",
       link: "",
       website: "",
@@ -723,15 +727,16 @@ function moveBandDown(index: number) {
 }
 
 function toggleBandMode(entry: BandEntry) {
-  entry.mode = entry.mode === "existing" ? "new" : "existing";
+  const nextMode = entry.mode === "existing" ? "new" : "existing";
+  const preservedName = entry.mode === "existing" ? entry.query.trim() : "";
+  entry.mode = nextMode;
   entry.selectedBandId = null;
   entry.selectedBandName = "";
   entry.query = "";
   entry.newBand = {
-    name: "",
+    name: preservedName,
     genre: "",
     origin_country: "",
-    rating: "",
     notes: "",
     link: "",
     website: "",
@@ -792,6 +797,10 @@ function toText(value: unknown) {
   return typeof value === "string" ? value : String(value);
 }
 
+function normalizeName(value: unknown) {
+  return toText(value).trim().toLowerCase();
+}
+
 function valueOrEmptyString(value: unknown) {
   const trimmed = toText(value).trim();
   return trimmed === "" ? "" : trimmed;
@@ -807,6 +816,13 @@ function numberOrZero(value: unknown) {
   if (trimmed === "") return 0;
   const num = Number(trimmed);
   return Number.isFinite(num) ? num : 0;
+}
+
+function numberOrUndefined(value: unknown) {
+  const trimmed = toText(value).trim();
+  if (trimmed === "") return undefined;
+  const num = Number(trimmed);
+  return Number.isFinite(num) ? num : undefined;
 }
 
 const eventRatingValue = computed(() => {
@@ -863,10 +879,10 @@ function venueStarFill(starIndex: number) {
 
 function setBandRating(entry: BandEntry, value: number) {
   if (value <= 0) {
-    entry.newBand.rating = "";
+    entry.eventRating = "";
     return;
   }
-  entry.newBand.rating = String(value);
+  entry.eventRating = String(value);
 }
 
 function setBandHover(entry: BandEntry, value: number) {
@@ -879,7 +895,7 @@ function clearBandHover(entry: BandEntry) {
 
 function bandStarFill(entry: BandEntry, starIndex: number) {
   const hoverValue = bandHoverRatings.value[entry.localId];
-  const base = hoverValue ?? Number(entry.newBand.rating);
+  const base = hoverValue ?? Number(entry.eventRating);
   if (!Number.isFinite(base)) {
     return 0;
   }
@@ -928,6 +944,18 @@ async function save() {
   saving.value = true;
 
   try {
+    if (useNewVenue.value && venueForm.value.name.trim()) {
+      const match = venues.value.find(
+        (venue) => normalizeName(venue.name) === normalizeName(venueForm.value.name)
+      );
+      if (match) {
+        useNewVenue.value = false;
+        selectedVenueId.value = match.id;
+        selectedVenueName.value = match.name;
+        venueQuery.value = match.name;
+      }
+    }
+
     const venuePayload = useNewVenue.value
       ? {
           name: venueForm.value.name.trim(),
@@ -957,13 +985,13 @@ async function save() {
         name: string;
         genre?: string;
         origin_country?: string;
-        rating?: number;
         notes?: string;
         link?: string;
         website?: string;
       };
       mainAct: boolean;
       runningOrder: number;
+      rating?: number;
     }> = [];
 
     let runningOrder = 1;
@@ -974,15 +1002,32 @@ async function save() {
             bandId: entry.selectedBandId,
             mainAct: entry.mainAct,
             runningOrder,
+            rating: numberOrUndefined(entry.eventRating),
           });
           runningOrder += 1;
         }
       } else if (entry.newBand.name.trim()) {
+        const existingBand = bands.value.find(
+          (band) => normalizeName(band.name) === normalizeName(entry.newBand.name)
+        );
+        if (existingBand) {
+          entry.mode = "existing";
+          entry.selectedBandId = existingBand.id;
+          entry.selectedBandName = existingBand.name;
+          entry.query = existingBand.name;
+          bandsPayload.push({
+            bandId: existingBand.id,
+            mainAct: entry.mainAct,
+            runningOrder,
+            rating: numberOrUndefined(entry.eventRating),
+          });
+          runningOrder += 1;
+          continue;
+        }
         const bandPayload = {
           name: entry.newBand.name.trim(),
           genre: valueOrUndefined(entry.newBand.genre),
           origin_country: valueOrUndefined(entry.newBand.origin_country),
-          rating: numberOrZero(entry.newBand.rating),
           notes: valueOrUndefined(entry.newBand.notes),
           link: valueOrUndefined(entry.newBand.link),
           website: valueOrUndefined(entry.newBand.website),
@@ -993,6 +1038,7 @@ async function save() {
           ) as typeof bandPayload,
           mainAct: entry.mainAct,
           runningOrder,
+          rating: numberOrUndefined(entry.eventRating),
         });
         runningOrder += 1;
       }
@@ -1026,6 +1072,7 @@ async function save() {
       emit("created");
     }
 
+    loaded.value = false;
     emit("close");
   } catch (e: any) {
     error.value = e?.message ?? "Failed to save event.";

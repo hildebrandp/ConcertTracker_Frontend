@@ -26,6 +26,7 @@
     <ConcertsTable
       v-if="!allConcertsOpen && !allBandsOpen && !allActsOpen && !allVenuesOpen"
       :concerts="concerts"
+      title="Last 10 Concerts"
       @select="openDetails"
     />
 
@@ -249,7 +250,7 @@
       :event-id="updateEventId"
       @close="closeEventModal"
       @created="refreshData"
-      @updated="refreshData"
+      @updated="handleEventUpdated"
     />
   </div>
 </template>
@@ -346,6 +347,7 @@ const returnToEventDetails = ref(false);
 const createOpen = ref(false);
 const updateOpen = ref(false);
 const updateEventId = ref<number | null>(null);
+const reopenEventId = ref<number | null>(null);
 async function loadAllConcerts() {
   allConcertsLoading.value = true;
   allConcertsError.value = null;
@@ -463,7 +465,7 @@ function buildVenueSummaries(
     });
   }
 
-  summaries.sort((a, b) => (b.last_visited_date ?? "").localeCompare(a.last_visited_date ?? ""));
+  summaries.sort((a, b) => a.venue_name.localeCompare(b.venue_name));
   return summaries;
 }
 
@@ -548,12 +550,12 @@ const totalBandPages = computed(() => {
 
 const filteredBands = computed(() => {
   const q = bandsSearch.value.trim().toLowerCase();
-  if (!q) {
-    return allBands.value;
-  }
-  return allBands.value.filter((band) =>
-    band.band_name.toLowerCase().includes(q)
-  );
+  const bandsList = q
+    ? allBands.value.filter((band) =>
+        band.band_name.toLowerCase().includes(q)
+      )
+    : allBands.value;
+  return [...bandsList].sort((a, b) => a.band_name.localeCompare(b.band_name));
 });
 
 const paginatedBands = computed(() => {
@@ -910,6 +912,15 @@ function closeEventModal() {
   createOpen.value = false;
   updateOpen.value = false;
   updateEventId.value = null;
+}
+
+async function handleEventUpdated() {
+  reopenEventId.value = updateEventId.value;
+  await refreshData();
+  if (reopenEventId.value) {
+    await openDetails(reopenEventId.value);
+    reopenEventId.value = null;
+  }
 }
 </script>
 

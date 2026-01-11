@@ -166,9 +166,9 @@ const mockDetails: Record<number, ConcertDetailsDto> = {
     venueId: 1,
     venueName: "Some Arena",
     bands: [
-      { id: 1, name: "Heaven Shall Burn", mainAct: true, runningOrder: 3 },
-      { id: 2, name: "Support Band A", mainAct: false, runningOrder: 2 },
-      { id: 3, name: "Support Band B", mainAct: false, runningOrder: 1 },
+      { id: 1, name: "Heaven Shall Burn", mainAct: true, runningOrder: 3, rating: 9 },
+      { id: 2, name: "Support Band A", mainAct: false, runningOrder: 2, rating: 7 },
+      { id: 3, name: "Support Band B", mainAct: false, runningOrder: 1, rating: 6 },
     ],
     participatedWith: [
       { id: 10, displayName: "Pascal" },
@@ -243,8 +243,9 @@ export async function getAllConcerts(): Promise<ConcertListItemDto[]> {
     return mockConcerts;
   }
 
-  const res = await http.get<ConcertEventDto[]>("/concertOverview");
-  return mapConcertOverviewData(res.data);
+  const res = await http.get<ConcertEventDto[]>("/concertEvents");
+  const sorted = [...res.data].sort((a, b) => b.datetime.localeCompare(a.datetime));
+  return mapConcertOverviewData(sorted);
 }
 
 async function mapConcertOverviewData(
