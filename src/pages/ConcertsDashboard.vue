@@ -64,8 +64,6 @@
 
       <ConcertsTable
         :concerts="paginatedConcerts"
-        title="All concerts"
-        hint="Showing all concerts"
         @select="openDetails"
       />
 
@@ -124,8 +122,6 @@
 
       <BandsTable
         :bands="paginatedBands"
-        title="Unique bands"
-        hint="Showing unique bands"
         @select="openBandDetails"
       />
 
@@ -184,8 +180,6 @@
 
       <EventBandsTable
         :entries="paginatedActs"
-        title="All bands"
-        hint="Showing all band appearances"
       />
 
       <div v-if="allActsError" class="error">
@@ -203,8 +197,7 @@
 
       <VenuesTable
         :venues="allVenues"
-        title="Total venues visited"
-        hint="Showing all visited venues"
+        @select="openVenueDetails"
       />
 
       <div v-if="allVenuesError" class="error">
@@ -231,6 +224,15 @@
       @show-acts="jumpToBandActs"
     />
 
+    <VenueDetailsModal
+      :open="venueDetailsOpen"
+      :venue="venueDetails"
+      :error="venueDetailsError"
+      :saving="venueDetailsSaving"
+      @close="closeVenueDetails"
+      @save="saveVenueDetails"
+    />
+
     <AddEventModal
       :open="createOpen"
       @close="closeCreate"
@@ -246,6 +248,7 @@ import ConcertsTable from "../components/ConcertsTable.vue";
 import BandsTable from "../components/BandsTable.vue";
 import VenuesTable from "../components/VenuesTable.vue";
 import BandDetailsModal from "../components/BandDetailsModal.vue";
+import VenueDetailsModal from "../components/VenueDetailsModal.vue";
 import EventBandsTable from "../components/EventBandsTable.vue";
 import ConcertDetailsModal from "../components/ConcertDetailsModal.vue";
 import AddEventModal from "../components/AddEventModal.vue";
@@ -255,11 +258,13 @@ import {
   getConcertBands,
   getConcertBandById,
   getConcertDetails,
+  getConcertVenueById,
   getConcertVenues,
   getEventBandSummaries,
   getLastConcerts,
   getStats,
   updateConcertBand,
+  updateConcertVenue,
 } from "../api/concertsApi";
 import type {
   BandSummaryDto,
@@ -267,8 +272,10 @@ import type {
   ConcertBandDetailsDto,
   ConcertDetailsDto,
   ConcertListItemDto,
+  ConcertVenueDetailsDto,
   ConcertVenueDto,
   CreateConcertBandDto,
+  CreateConcertVenueDto,
   EventBandSummaryDto,
   StatsDto,
   VenueSummaryDto,
@@ -313,6 +320,10 @@ const bandDetailsError = ref<string | null>(null);
 const bandDetailsSaving = ref(false);
 const bandLookup = ref<ConcertBandDto[]>([]);
 const bandLookupError = ref<string | null>(null);
+const venueDetailsOpen = ref(false);
+const venueDetails = ref<ConcertVenueDetailsDto | null>(null);
+const venueDetailsError = ref<string | null>(null);
+const venueDetailsSaving = ref(false);
 
 const createOpen = ref(false);
 async function loadAllConcerts() {
@@ -691,6 +702,22 @@ function closeBandDetails() {
   bandDetailsOpen.value = false;
 }
 
+async function openVenueDetails(venueId: number) {
+  venueDetailsOpen.value = true;
+  venueDetails.value = null;
+  venueDetailsError.value = null;
+
+  try {
+    venueDetails.value = await getConcertVenueById(venueId);
+  } catch (e: any) {
+    venueDetailsError.value = e?.message ?? "Failed to load venue details.";
+  }
+}
+
+function closeVenueDetails() {
+  venueDetailsOpen.value = false;
+}
+
 async function jumpToBandActs(bandName: string) {
   actsSearch.value = bandName;
   await openAllActs();
@@ -719,6 +746,28 @@ async function saveBandDetails(payload: CreateConcertBandDto) {
     bandDetailsError.value = e?.message ?? "Failed to update band.";
   } finally {
     bandDetailsSaving.value = false;
+  }
+}
+
+async function saveVenueDetails(payload: CreateConcertVenueDto) {
+  if (!venueDetails.value) {
+    return;
+  }
+
+  venueDetailsSaving.value = true;
+  venueDetailsError.value = null;
+
+  try {
+    await updateConcertVenue(venueDetails.value.id, payload);
+    venueDetails.value = await getConcertVenueById(venueDetails.value.id);
+
+    if (allVenuesOpen.value || allVenues.value.length > 0) {
+      await loadAllVenues();
+    }
+  } catch (e: any) {
+    venueDetailsError.value = e?.message ?? "Failed to update venue.";
+  } finally {
+    venueDetailsSaving.value = false;
   }
 }
 

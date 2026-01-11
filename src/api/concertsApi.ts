@@ -6,6 +6,7 @@ import type {
   ConcertBandDto,
   ConcertBandDetailsDto,
   ConcertVenueDto,
+  ConcertVenueDetailsDto,
   BandSummaryDto,
   EventBandSummaryDto,
   CreateConcertBandDto,
@@ -74,6 +75,43 @@ const mockVenues: ConcertVenueDto[] = [
   { id: 1, name: "Some Arena", rating: 8 },
   { id: 2, name: "Steel Hall", rating: 7 },
 ];
+
+const mockVenueDetailsById: Record<number, ConcertVenueDetailsDto> = {
+  1: {
+    id: 1,
+    name: "Some Arena",
+    address: "123 Main St",
+    city: "Cologne",
+    state: "",
+    country: "Germany",
+    postal_code: 50667,
+    type: "Arena",
+    indoor_outdoor: "indoor",
+    capacity: 18000,
+    website: "https://example.com",
+    notes: "Great sound.",
+    latitude: "50.9375",
+    longitude: "6.9603",
+    rating: 8,
+  },
+  2: {
+    id: 2,
+    name: "Steel Hall",
+    address: "45 Steel Rd",
+    city: "Essen",
+    state: "",
+    country: "Germany",
+    postal_code: 45127,
+    type: "Club",
+    indoor_outdoor: "indoor",
+    capacity: 2500,
+    website: "",
+    notes: "",
+    latitude: "",
+    longitude: "",
+    rating: 7,
+  },
+};
 
 const mockBandDetailsById: Record<number, ConcertBandDetailsDto> = {
   1: {
@@ -326,6 +364,36 @@ export async function getConcertBandById(
   return res.data;
 }
 
+export async function getConcertVenueById(
+  venueId: number
+): Promise<ConcertVenueDetailsDto> {
+  if (USE_MOCK) {
+    await sleep(120);
+    return (
+      mockVenueDetailsById[venueId] ?? {
+        id: venueId,
+        name: `Venue #${venueId}`,
+        address: "",
+        city: "",
+        state: "",
+        country: "",
+        postal_code: null,
+        type: "",
+        indoor_outdoor: null,
+        capacity: null,
+        website: "",
+        notes: "",
+        latitude: "",
+        longitude: "",
+        rating: null,
+      }
+    );
+  }
+
+  const res = await http.get<ConcertVenueDetailsDto>(`/concertVenues/${venueId}`);
+  return res.data;
+}
+
 export async function updateConcertBand(
   bandId: number,
   payload: CreateConcertBandDto
@@ -337,6 +405,19 @@ export async function updateConcertBand(
   }
 
   await http.put(`/concertBands/${bandId}`, payload);
+}
+
+export async function updateConcertVenue(
+  venueId: number,
+  payload: CreateConcertVenueDto
+): Promise<void> {
+  if (USE_MOCK) {
+    await sleep(120);
+    mockVenueDetailsById[venueId] = { id: venueId, ...payload };
+    return;
+  }
+
+  await http.put(`/concertVenues/${venueId}`, payload);
 }
 
 export async function createConcertVenue(payload: CreateConcertVenueDto): Promise<number> {

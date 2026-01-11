@@ -27,7 +27,7 @@
           <td>{{ formatDate(c.date) }}</td>
           <td class="name">{{ c.name }}</td>
           <td>{{ c.venueName ?? "-" }}</td>
-          <td>{{ c.bandCount ?? "—" }}</td>
+          <td>{{ c.bandCount ?? "ï¿½" }}</td>
           <td>
             <span class="rating">{{ c.rating }}</span>
           </td>
@@ -51,7 +51,7 @@ const { title, hint } = withDefaults(
     hint?: string;
   }>(),
   {
-    title: "Last 10 concerts",
+    title: "All attended Concerts",
     hint: "Click a row to see details",
   }
 );

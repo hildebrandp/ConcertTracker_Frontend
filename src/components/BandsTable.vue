@@ -51,7 +51,7 @@ const { title, hint } = withDefaults(
     hint?: string;
   }>(),
   {
-    title: "Unique bands",
+    title: "Seen Bands",
     hint: "Showing unique bands",
   }
 );

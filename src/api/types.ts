@@ -34,6 +34,24 @@ export interface ConcertVenueDto {
   rating?: number | null;
 }
 
+export interface ConcertVenueDetailsDto {
+  id: number;
+  name: string;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+  postal_code?: number | null;
+  type?: string | null;
+  indoor_outdoor?: "indoor" | "outdoor" | "mixed" | null;
+  capacity?: number | null;
+  website?: string | null;
+  notes?: string | null;
+  latitude?: string | null;
+  longitude?: string | null;
+  rating?: number | null;
+}
+
 export interface EventBandsDto {
   count: number;
 }

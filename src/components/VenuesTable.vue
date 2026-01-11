@@ -15,7 +15,14 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="venue in venues" :key="venue.venue_id">
+        <tr
+          v-for="venue in venues"
+          :key="venue.venue_id"
+          class="row"
+          role="button"
+          tabindex="0"
+          @click="$emit('select', venue.venue_id)"
+        >
           <td class="name">{{ venue.venue_name }}</td>
           <td>{{ formatDate(venue.last_visited_date) }}</td>
           <td>{{ venue.visit_count }}</td>
@@ -42,10 +49,14 @@ const { title, hint } = withDefaults(
     hint?: string;
   }>(),
   {
-    title: "Total venues visited",
+    title: "Visited Venues",
     hint: "Showing all venues",
   }
 );
+
+defineEmits<{
+  (e: "select", venueId: number): void;
+}>();
 
 function formatDate(iso?: string | null) {
   if (!iso) return "-";
@@ -90,6 +101,10 @@ function formatDate(iso?: string | null) {
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   text-align: left;
   font-size: 14px;
+}
+
+.row:hover {
+  background: rgba(0, 0, 0, 0.03);
 }
 
 .name {

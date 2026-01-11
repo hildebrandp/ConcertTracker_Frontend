@@ -42,7 +42,7 @@ const { title, hint } = withDefaults(
     hint?: string;
   }>(),
   {
-    title: "All bands",
+    title: "All live acts",
     hint: "Showing all band appearances",
   }
 );
