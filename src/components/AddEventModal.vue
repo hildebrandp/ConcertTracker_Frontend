@@ -282,11 +282,21 @@
             <div v-if="band.mode === 'new'" class="grid">
               <div class="field">
                 <label>Genre</label>
-                <input v-model.trim="band.newBand.genre" type="text" class="band-input" />
+                <input
+                  v-model.trim="band.newBand.genre"
+                  type="text"
+                  class="band-input"
+                  list="band-genre-options"
+                />
               </div>
               <div class="field">
                 <label>Origin country</label>
-                <input v-model.trim="band.newBand.origin_country" type="text" class="band-input" />
+                <input
+                  v-model.trim="band.newBand.origin_country"
+                  type="text"
+                  class="band-input"
+                  list="band-origin-options"
+                />
               </div>
               <div class="field">
                 <label>Rating</label>
@@ -360,6 +370,13 @@
             {{ saving ? "Saving..." : "Create event" }}
           </button>
         </div>
+
+        <datalist id="band-genre-options">
+          <option v-for="genre in bandGenreOptions" :key="genre" :value="genre" />
+        </datalist>
+        <datalist id="band-origin-options">
+          <option v-for="origin in bandOriginOptions" :key="origin" :value="origin" />
+        </datalist>
       </form>
     </div>
   </div>
@@ -480,6 +497,32 @@ const venueMatches = computed(() => {
   return venues.value
     .filter((venue) => venue.name.toLowerCase().includes(q))
     .slice(0, 6);
+});
+
+const bandGenreOptions = computed(() => {
+  const unique = new Map<string, string>();
+  for (const band of bands.value) {
+    const raw = toText((band as any).genre).trim();
+    if (!raw) continue;
+    const key = raw.toLowerCase();
+    if (!unique.has(key)) {
+      unique.set(key, raw);
+    }
+  }
+  return Array.from(unique.values()).sort((a, b) => a.localeCompare(b));
+});
+
+const bandOriginOptions = computed(() => {
+  const unique = new Map<string, string>();
+  for (const band of bands.value) {
+    const raw = toText((band as any).origin_country).trim();
+    if (!raw) continue;
+    const key = raw.toLowerCase();
+    if (!unique.has(key)) {
+      unique.set(key, raw);
+    }
+  }
+  return Array.from(unique.values()).sort((a, b) => a.localeCompare(b));
 });
 
 watch(
@@ -645,6 +688,11 @@ function valueOrEmptyString(value: unknown) {
   return trimmed === "" ? "" : trimmed;
 }
 
+function valueOrUndefined(value: unknown) {
+  const trimmed = toText(value).trim();
+  return trimmed === "" ? undefined : trimmed;
+}
+
 function numberOrZero(value: unknown) {
   const trimmed = toText(value).trim();
   if (trimmed === "") return 0;
@@ -773,26 +821,31 @@ async function save() {
   try {
     let venueId = selectedVenueId.value;
     if (useNewVenue.value) {
-      venueId = await createConcertVenue({
+      const venuePayload = {
         name: venueForm.value.name.trim(),
-        address: valueOrEmptyString(venueForm.value.address),
-        city: valueOrEmptyString(venueForm.value.city),
-        state: valueOrEmptyString(venueForm.value.state),
-        country: valueOrEmptyString(venueForm.value.country),
+        address: valueOrUndefined(venueForm.value.address),
+        city: valueOrUndefined(venueForm.value.city),
+        state: valueOrUndefined(venueForm.value.state),
+        country: valueOrUndefined(venueForm.value.country),
         postal_code: numberOrZero(venueForm.value.postal_code),
-        type: valueOrEmptyString(venueForm.value.type),
-        indoor_outdoor: valueOrEmptyString(venueForm.value.indoor_outdoor) as
+        type: valueOrUndefined(venueForm.value.type),
+        indoor_outdoor: valueOrUndefined(venueForm.value.indoor_outdoor) as
           | "indoor"
           | "outdoor"
           | "mixed"
-          | null,
+          | undefined,
         capacity: numberOrZero(venueForm.value.capacity),
-        website: valueOrEmptyString(venueForm.value.website),
-        notes: valueOrEmptyString(venueForm.value.notes),
-        latitude: valueOrEmptyString(venueForm.value.latitude),
-        longitude: valueOrEmptyString(venueForm.value.longitude),
+        website: valueOrUndefined(venueForm.value.website),
+        notes: valueOrUndefined(venueForm.value.notes),
+        latitude: valueOrUndefined(venueForm.value.latitude),
+        longitude: valueOrUndefined(venueForm.value.longitude),
         rating: numberOrZero(venueForm.value.rating),
-      });
+      };
+      venueId = await createConcertVenue(
+        Object.fromEntries(
+          Object.entries(venuePayload).filter(([, value]) => value !== undefined)
+        ) as typeof venuePayload
+      );
     }
 
     if (!venueId) {
@@ -806,15 +859,20 @@ async function save() {
           bandIds.push(entry.selectedBandId);
         }
       } else if (entry.newBand.name.trim()) {
-        const newBandId = await createConcertBand({
+        const bandPayload = {
           name: entry.newBand.name.trim(),
-          genre: valueOrEmptyString(entry.newBand.genre),
-          origin_country: valueOrEmptyString(entry.newBand.origin_country),
+          genre: valueOrUndefined(entry.newBand.genre),
+          origin_country: valueOrUndefined(entry.newBand.origin_country),
           rating: numberOrZero(entry.newBand.rating),
-          notes: valueOrEmptyString(entry.newBand.notes),
-          link: valueOrEmptyString(entry.newBand.link),
-          website: valueOrEmptyString(entry.newBand.website),
-        });
+          notes: valueOrUndefined(entry.newBand.notes),
+          link: valueOrUndefined(entry.newBand.link),
+          website: valueOrUndefined(entry.newBand.website),
+        };
+        const newBandId = await createConcertBand(
+          Object.fromEntries(
+            Object.entries(bandPayload).filter(([, value]) => value !== undefined)
+          ) as typeof bandPayload
+        );
         bandIds.push(newBandId);
       }
     }
@@ -1165,9 +1223,6 @@ async function save() {
   }
 }
 </style>
-
-
-
 
 
 

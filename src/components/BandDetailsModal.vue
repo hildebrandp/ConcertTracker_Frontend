@@ -42,11 +42,31 @@
             </div>
             <div class="detail full">
               <div class="detail-label">Plex Link</div>
-              <div class="detail-value">{{ band.link || "-" }}</div>
+              <div class="detail-value">
+                <a
+                  v-if="band.link"
+                  :href="normalizeUrl(band.link)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {{ band.link }}
+                </a>
+                <span v-else>-</span>
+              </div>
             </div>
             <div class="detail full">
               <div class="detail-label">Website</div>
-              <div class="detail-value">{{ band.website || "-" }}</div>
+              <div class="detail-value">
+                <a
+                  v-if="band.website"
+                  :href="normalizeUrl(band.website)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {{ band.website }}
+                </a>
+                <span v-else>-</span>
+              </div>
             </div>
             <div class="detail full">
               <div class="detail-label">Notes</div>
@@ -64,14 +84,19 @@
                 required
               />
             </div>
-            <div class="field">
-              <label for="band-genre">Genre</label>
-              <input id="band-genre" v-model.trim="form.genre" type="text" />
-            </div>
-            <div class="field">
-              <label for="band-origin">Origin country</label>
-              <input id="band-origin" v-model.trim="form.origin_country" type="text" />
-            </div>
+          <div class="field">
+            <label for="band-genre">Genre</label>
+            <input id="band-genre" v-model.trim="form.genre" type="text" list="band-genre-options" />
+          </div>
+          <div class="field">
+            <label for="band-origin">Origin country</label>
+            <input
+              id="band-origin"
+              v-model.trim="form.origin_country"
+              type="text"
+              list="band-origin-options"
+            />
+          </div>
             <div class="field">
               <label for="band-rating">Rating</label>
               <div
@@ -146,6 +171,13 @@
             </button>
           </template>
         </div>
+
+        <datalist id="band-genre-options">
+          <option v-for="genre in bandGenreOptions" :key="genre" :value="genre" />
+        </datalist>
+        <datalist id="band-origin-options">
+          <option v-for="origin in bandOriginOptions" :key="origin" :value="origin" />
+        </datalist>
       </div>
     </div>
   </div>
@@ -153,13 +185,14 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
-import type { ConcertBandDetailsDto, CreateConcertBandDto } from "../api/types";
+import type { ConcertBandDetailsDto, ConcertBandDto, CreateConcertBandDto } from "../api/types";
 
 const props = defineProps<{
   open: boolean;
   band: ConcertBandDetailsDto | null;
   error: string | null;
   saving: boolean;
+  allBands: ConcertBandDetailsDto[] | ConcertBandDto[];
 }>();
 
 const emit = defineEmits<{
@@ -178,6 +211,32 @@ const form = reactive({
 });
 
 const isEditing = ref(false);
+
+const bandGenreOptions = computed(() => {
+  const unique = new Map<string, string>();
+  for (const band of props.allBands) {
+    const raw = toText((band as any).genre).trim();
+    if (!raw) continue;
+    const key = raw.toLowerCase();
+    if (!unique.has(key)) {
+      unique.set(key, raw);
+    }
+  }
+  return Array.from(unique.values()).sort((a, b) => a.localeCompare(b));
+});
+
+const bandOriginOptions = computed(() => {
+  const unique = new Map<string, string>();
+  for (const band of props.allBands) {
+    const raw = toText((band as any).origin_country).trim();
+    if (!raw) continue;
+    const key = raw.toLowerCase();
+    if (!unique.has(key)) {
+      unique.set(key, raw);
+    }
+  }
+  return Array.from(unique.values()).sort((a, b) => a.localeCompare(b));
+});
 const hoverRating = ref<number | null>(null);
 
 const ratingValue = computed(() => {
@@ -214,16 +273,16 @@ function toText(value: unknown) {
   return typeof value === "string" ? value : String(value);
 }
 
-function valueOrNull(value: unknown) {
+function valueOrUndefined(value: unknown) {
   const trimmed = toText(value).trim();
-  return trimmed === "" ? null : trimmed;
+  return trimmed === "" ? undefined : trimmed;
 }
 
-function numberOrNull(value: unknown) {
+function numberOrUndefined(value: unknown) {
   const trimmed = toText(value).trim();
-  if (trimmed === "") return null;
+  if (trimmed === "") return undefined;
   const num = Number(trimmed);
-  return Number.isFinite(num) ? num : null;
+  return Number.isFinite(num) ? num : undefined;
 }
 
 function submit() {
@@ -232,12 +291,12 @@ function submit() {
   }
   emit("save", {
     name: form.name.trim(),
-    genre: valueOrNull(form.genre),
-    origin_country: valueOrNull(form.origin_country),
-    rating: numberOrNull(form.rating),
-    notes: valueOrNull(form.notes),
-    link: valueOrNull(form.link),
-    website: valueOrNull(form.website),
+    genre: valueOrUndefined(form.genre),
+    origin_country: valueOrUndefined(form.origin_country),
+    rating: numberOrUndefined(form.rating),
+    notes: valueOrUndefined(form.notes),
+    link: valueOrUndefined(form.link),
+    website: valueOrUndefined(form.website),
   });
 }
 
@@ -251,6 +310,15 @@ function setRating(value: number) {
 
 function setHover(value: number) {
   hoverRating.value = value;
+}
+
+function normalizeUrl(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  return `https://${trimmed}`;
 }
 
 function starFill(starIndex: number) {
@@ -343,6 +411,11 @@ function starFillValue(starIndex: number, rating: number) {
 
 .detail-value {
   font-size: 14px;
+}
+
+.detail-value a {
+  color: #0b4da2;
+  text-decoration: underline;
 }
 
 .rating-display {

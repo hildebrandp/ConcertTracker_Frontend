@@ -204,6 +204,7 @@
       :band="bandDetails"
       :error="bandDetailsError"
       :saving="bandDetailsSaving"
+      :all-bands="bandLookup"
       @close="closeBandDetails"
       @save="saveBandDetails"
     />
@@ -228,6 +229,7 @@ import AddEventModal from "../components/AddEventModal.vue";
 import {
   getAllConcerts,
   getBandSummaries,
+  getConcertBands,
   getConcertBandById,
   getConcertDetails,
   getEventBandSummaries,
@@ -237,6 +239,7 @@ import {
 } from "../api/concertsApi";
 import type {
   BandSummaryDto,
+  ConcertBandDto,
   ConcertBandDetailsDto,
   ConcertDetailsDto,
   ConcertListItemDto,
@@ -278,6 +281,8 @@ const bandDetailsOpen = ref(false);
 const bandDetails = ref<ConcertBandDetailsDto | null>(null);
 const bandDetailsError = ref<string | null>(null);
 const bandDetailsSaving = ref(false);
+const bandLookup = ref<ConcertBandDto[]>([]);
+const bandLookupError = ref<string | null>(null);
 
 const createOpen = ref(false);
 async function loadAllConcerts() {
@@ -536,6 +541,14 @@ async function openBandDetails(bandId: number) {
   bandDetailsOpen.value = true;
   bandDetails.value = null;
   bandDetailsError.value = null;
+
+  if (bandLookup.value.length === 0) {
+    try {
+      bandLookup.value = await getConcertBands();
+    } catch (e: any) {
+      bandLookupError.value = e?.message ?? "Failed to load band lookups.";
+    }
+  }
 
   try {
     bandDetails.value = await getConcertBandById(bandId);
