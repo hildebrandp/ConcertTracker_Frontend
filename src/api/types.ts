@@ -4,6 +4,7 @@ export interface StatsDto {
   concertsAttended: number;
   bandsSeen: number;
   actsSeen: number;
+  venuesSeen: number;
   // Optional: add more later (venuesVisited, citiesVisited, etc.)
 }
 

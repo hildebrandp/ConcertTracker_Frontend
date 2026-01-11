@@ -31,7 +31,8 @@ function sleep(ms: number) {
 const mockStats: StatsDto = {
   concertsAttended: 42,
   bandsSeen: 128,
-  actsSeen: 32
+  actsSeen: 32,
+  venuesSeen: 4
 };
 const mockBandSummaries: BandSummaryDto[] = [
   {

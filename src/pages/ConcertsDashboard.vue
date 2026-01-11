@@ -205,8 +205,10 @@
       :error="bandDetailsError"
       :saving="bandDetailsSaving"
       :all-bands="bandLookup"
+      :all-acts="allActs"
       @close="closeBandDetails"
       @save="saveBandDetails"
+      @show-acts="jumpToBandActs"
     />
 
     <AddEventModal
@@ -550,6 +552,10 @@ async function openBandDetails(bandId: number) {
     }
   }
 
+  if (allActs.value.length === 0) {
+    await loadAllActs();
+  }
+
   try {
     bandDetails.value = await getConcertBandById(bandId);
   } catch (e: any) {
@@ -558,6 +564,12 @@ async function openBandDetails(bandId: number) {
 }
 
 function closeBandDetails() {
+  bandDetailsOpen.value = false;
+}
+
+async function jumpToBandActs(bandName: string) {
+  actsSearch.value = bandName;
+  await openAllActs();
   bandDetailsOpen.value = false;
 }
 

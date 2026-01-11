@@ -14,6 +14,11 @@
       <div class="stat-label">Total Bands seen</div>
       <div class="stat-value">{{ stats?.actsSeen ?? "-" }}</div>
     </button>
+
+    <button type="button" class="stat-card clickable">
+      <div class="stat-label">Total Venues visited</div>
+      <div class="stat-value">{{ stats?.venuesSeen ?? "-" }}</div>
+    </button>
   </div>
 </template>
 
@@ -34,7 +39,7 @@ defineEmits<{
 <style scoped>
 .stats-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(240px, 1fr));
+  grid-template-columns: repeat(4, minmax(240px, 1fr));
   gap: 12px;
   margin-bottom: 16px;
 }

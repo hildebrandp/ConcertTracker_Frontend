@@ -40,7 +40,7 @@
                 </div>
               </div>
             </div>
-            <div class="detail full">
+            <div class="detail">
               <div class="detail-label">Plex Link</div>
               <div class="detail-value">
                 <a
@@ -71,6 +71,19 @@
             <div class="detail full">
               <div class="detail-label">Notes</div>
               <div class="detail-value">{{ band.notes || "-" }}</div>
+            </div>
+            <div class="detail">
+              <div class="detail-label">Seen live</div>
+              <div class="detail-value">
+                <button
+                  type="button"
+                  class="link-button"
+                  :disabled="!seenCount"
+                  @click="showBandActs"
+                >
+                  {{ seenCount }} time{{ seenCount === 1 ? "" : "s" }}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -185,7 +198,12 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
-import type { ConcertBandDetailsDto, ConcertBandDto, CreateConcertBandDto } from "../api/types";
+import type {
+  ConcertBandDetailsDto,
+  ConcertBandDto,
+  CreateConcertBandDto,
+  EventBandSummaryDto,
+} from "../api/types";
 
 const props = defineProps<{
   open: boolean;
@@ -193,11 +211,13 @@ const props = defineProps<{
   error: string | null;
   saving: boolean;
   allBands: ConcertBandDetailsDto[] | ConcertBandDto[];
+  allActs: EventBandSummaryDto[];
 }>();
 
 const emit = defineEmits<{
   (e: "close"): void;
   (e: "save", payload: CreateConcertBandDto): void;
+  (e: "show-acts", bandName: string): void;
 }>();
 
 const form = reactive({
@@ -237,6 +257,20 @@ const bandOriginOptions = computed(() => {
   }
   return Array.from(unique.values()).sort((a, b) => a.localeCompare(b));
 });
+
+const seenCount = computed(() => {
+  if (!props.band) return 0;
+  const target = props.band.name.trim().toLowerCase();
+  if (!target) return 0;
+  return props.allActs.filter(
+    (entry) => entry.band_name.trim().toLowerCase() === target
+  ).length;
+});
+
+function showBandActs() {
+  if (!props.band) return;
+  emit("show-acts", props.band.name);
+}
 const hoverRating = ref<number | null>(null);
 
 const ratingValue = computed(() => {
@@ -416,6 +450,22 @@ function starFillValue(starIndex: number, rating: number) {
 .detail-value a {
   color: #0b4da2;
   text-decoration: underline;
+}
+
+.link-button {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 14px;
+  color: #0b4da2;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-button:disabled {
+  color: rgba(0, 0, 0, 0.4);
+  text-decoration: none;
+  cursor: default;
 }
 
 .rating-display {
