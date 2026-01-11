@@ -5,9 +5,14 @@
         <h1>Concert-Tracker</h1>
         <div class="sub">Overview and recent activity</div>
       </div>
-      <button class="primary" type="button" @click="openCreate">
-        Add event
-      </button>
+      <div class="header-actions">
+        <button class="danger" type="button" @click="confirmClearAll">
+          Delete all data
+        </button>
+        <button class="primary" type="button" @click="openCreate">
+          Add event
+        </button>
+      </div>
     </header>
 
     <StatsRow
@@ -211,6 +216,8 @@
       :error="detailsError"
       @close="closeDetails"
       @show-venue="openVenueDetailsFromEvent"
+      @update-event="openUpdateEvent"
+      @delete-event="confirmDeleteEvent"
     />
 
     <BandDetailsModal
@@ -223,6 +230,7 @@
       @close="closeBandDetails"
       @save="saveBandDetails"
       @show-acts="jumpToBandActs"
+      @delete-band="confirmDeleteBand"
     />
 
     <VenueDetailsModal
@@ -232,12 +240,16 @@
       :saving="venueDetailsSaving"
       @close="closeVenueDetails"
       @save="saveVenueDetails"
+      @delete-venue="confirmDeleteVenue"
     />
 
     <AddEventModal
-      :open="createOpen"
-      @close="closeCreate"
+      :open="createOpen || updateOpen"
+      :mode="updateOpen ? 'update' : 'create'"
+      :event-id="updateEventId"
+      @close="closeEventModal"
       @created="refreshData"
+      @updated="refreshData"
     />
   </div>
 </template>
@@ -261,6 +273,10 @@ import {
   getConcertDetails,
   getConcertVenueById,
   getConcertVenues,
+  clearAllData,
+  deleteConcertBand,
+  deleteConcertEvent,
+  deleteConcertVenue,
   getEventBandSummaries,
   getLastConcerts,
   getStats,
@@ -328,6 +344,8 @@ const venueDetailsSaving = ref(false);
 const returnToEventDetails = ref(false);
 
 const createOpen = ref(false);
+const updateOpen = ref(false);
+const updateEventId = ref<number | null>(null);
 async function loadAllConcerts() {
   allConcertsLoading.value = true;
   allConcertsError.value = null;
@@ -688,6 +706,84 @@ function closeDetails() {
   detailsOpen.value = false;
 }
 
+async function confirmDeleteEvent() {
+  if (!selectedDetails.value) return;
+  const ok = window.confirm(
+    `Delete event "${selectedDetails.value.name}"? This cannot be undone.`
+  );
+  if (!ok) return;
+
+  try {
+    await deleteConcertEvent(selectedDetails.value.id);
+    detailsOpen.value = false;
+    await refreshData();
+  } catch (e: any) {
+    detailsError.value = e?.message ?? "Failed to delete event.";
+  }
+}
+
+async function confirmDeleteBand() {
+  if (!bandDetails.value) return;
+  const ok = window.confirm(
+    `Delete band "${bandDetails.value.name}"? This cannot be undone.`
+  );
+  if (!ok) return;
+
+  try {
+    await deleteConcertBand(bandDetails.value.id);
+    bandDetailsOpen.value = false;
+    await refreshData();
+  } catch (e: any) {
+    bandDetailsError.value = e?.message ?? "Failed to delete band.";
+  }
+}
+
+async function confirmDeleteVenue() {
+  if (!venueDetails.value) return;
+  const ok = window.confirm(
+    `Delete venue "${venueDetails.value.name}"? This cannot be undone.`
+  );
+  if (!ok) return;
+
+  try {
+    await deleteConcertVenue(venueDetails.value.id);
+    venueDetailsOpen.value = false;
+    await refreshData();
+  } catch (e: any) {
+    venueDetailsError.value = e?.message ?? "Failed to delete venue.";
+  }
+}
+
+async function confirmClearAll() {
+  const ok = window.confirm(
+    "Delete ALL data (events, bands, venues, participants)? This cannot be undone."
+  );
+  if (!ok) return;
+  const confirmText = window.prompt(
+    "Type DELETE to confirm clearing all data."
+  );
+  if (confirmText !== "DELETE") {
+    return;
+  }
+
+  try {
+    await clearAllData();
+    detailsOpen.value = false;
+    bandDetailsOpen.value = false;
+    venueDetailsOpen.value = false;
+    createOpen.value = false;
+    updateOpen.value = false;
+    updateEventId.value = null;
+    allConcerts.value = [];
+    allBands.value = [];
+    allActs.value = [];
+    allVenues.value = [];
+    await refreshData();
+  } catch (e: any) {
+    detailsError.value = e?.message ?? "Failed to delete all data.";
+  }
+}
+
 async function openVenueDetailsFromEvent(venueId: number) {
   await openVenueDetails(venueId, true);
   detailsOpen.value = false;
@@ -802,6 +898,19 @@ function openCreate() {
 function closeCreate() {
   createOpen.value = false;
 }
+
+function openUpdateEvent() {
+  if (!selectedDetails.value) return;
+  updateEventId.value = selectedDetails.value.id;
+  updateOpen.value = true;
+  detailsOpen.value = false;
+}
+
+function closeEventModal() {
+  createOpen.value = false;
+  updateOpen.value = false;
+  updateEventId.value = null;
+}
 </script>
 
 <style scoped>
@@ -837,6 +946,21 @@ function closeCreate() {
   border-radius: 10px;
   padding: 8px 12px;
   cursor: pointer;
+}
+
+.danger {
+  border: 1px solid rgba(180, 0, 0, 0.4);
+  background: rgba(180, 0, 0, 0.08);
+  color: #7a0b0b;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 @media (max-width: 720px) {

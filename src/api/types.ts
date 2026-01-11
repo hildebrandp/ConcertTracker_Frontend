@@ -56,6 +56,16 @@ export interface EventBandsDto {
   count: number;
 }
 
+export interface EventBandDetailDto {
+  event_band_id: number;
+  band_id: number;
+  band_name: string;
+  mainAct?: boolean | null;
+  runningOrder?: number | null;
+  rating?: number | null;
+  notes?: string | null;
+}
+
 export interface BandSummaryDto {
   band_id: number;
   band_name: string;

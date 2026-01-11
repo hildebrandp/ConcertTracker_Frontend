@@ -15,6 +15,7 @@ import type {
   CreateConcertEventBundleDto,
   CreateConcertEventBundleResponseDto,
   CreateEventBandDto,
+  EventBandDetailDto,
   StatsDto,
   EventBandsDto,
 } from "./types";
@@ -176,6 +177,32 @@ const mockDetails: Record<number, ConcertDetailsDto> = {
   },
 };
 
+const mockEventBandsByEventId: Record<number, EventBandDetailDto[]> = {
+  1001: [
+    {
+      event_band_id: 1,
+      band_id: 1,
+      band_name: "Heaven Shall Burn",
+      mainAct: true,
+      runningOrder: 3,
+    },
+    {
+      event_band_id: 2,
+      band_id: 2,
+      band_name: "Support Band A",
+      mainAct: false,
+      runningOrder: 2,
+    },
+    {
+      event_band_id: 3,
+      band_id: 3,
+      band_name: "Support Band B",
+      mainAct: false,
+      runningOrder: 1,
+    },
+  ],
+};
+
 export async function getStats(): Promise<StatsDto> {
   if (USE_MOCK) {
     await sleep(150);
@@ -329,6 +356,24 @@ export async function getConcertDetails(concertId: number): Promise<ConcertDetai
   };
 }
 
+export async function getConcertEventById(concertId: number): Promise<ConcertEventDto> {
+  if (USE_MOCK) {
+    await sleep(120);
+    const fallback = mockConcerts.find((concert) => concert.id === concertId);
+    return {
+      id: concertId,
+      name: fallback?.name ?? `Concert #${concertId}`,
+      datetime: `${fallback?.date ?? "2025-01-01"} 19:00:00`,
+      venue_id: fallback?.venueId ?? 1,
+      rating: fallback?.rating ?? 0,
+      notes: "",
+    };
+  }
+
+  const res = await http.get<ConcertEventDto>(`/concertEvents/${concertId}`);
+  return res.data;
+}
+
 export async function getConcertVenues(): Promise<ConcertVenueDto[]> {
   if (USE_MOCK) {
     await sleep(100);
@@ -346,6 +391,20 @@ export async function getConcertBands(): Promise<ConcertBandDto[]> {
   }
 
   const res = await http.get<ConcertBandDto[]>("/concertBands");
+  return res.data;
+}
+
+export async function getEventBandsByEventIdDetails(
+  eventId: number
+): Promise<EventBandDetailDto[]> {
+  if (USE_MOCK) {
+    await sleep(100);
+    return mockEventBandsByEventId[eventId] ?? [];
+  }
+
+  const res = await http.get<EventBandDetailDto[]>(
+    `/eventBandsByEventId/${eventId}/details`
+  );
   return res.data;
 }
 
@@ -495,6 +554,64 @@ export async function createConcertEventWithBands(
     payload
   );
   return res.data;
+}
+
+export async function updateConcertEventWithBands(
+  eventId: number,
+  payload: CreateConcertEventBundleDto
+): Promise<CreateConcertEventBundleResponseDto> {
+  if (USE_MOCK) {
+    await sleep(120);
+    return {
+      message: "Concert-Event bundle updated successfully",
+      eventId,
+      venueId: payload.venueId ?? Date.now() + 1,
+      bandIds: payload.bands.map((_, index) => Date.now() + 2 + index),
+      eventBandIds: payload.bands.map((_, index) => Date.now() + 100 + index),
+    };
+  }
+
+  const res = await http.put<CreateConcertEventBundleResponseDto>(
+    `/concertEvents/${eventId}/withBands`,
+    payload
+  );
+  return res.data;
+}
+
+export async function deleteConcertEvent(eventId: number): Promise<void> {
+  if (USE_MOCK) {
+    await sleep(80);
+    return;
+  }
+
+  await http.delete(`/concertEvents/${eventId}`);
+}
+
+export async function deleteConcertBand(bandId: number): Promise<void> {
+  if (USE_MOCK) {
+    await sleep(80);
+    return;
+  }
+
+  await http.delete(`/concertBands/${bandId}`);
+}
+
+export async function deleteConcertVenue(venueId: number): Promise<void> {
+  if (USE_MOCK) {
+    await sleep(80);
+    return;
+  }
+
+  await http.delete(`/concertVenues/${venueId}`);
+}
+
+export async function clearAllData(): Promise<void> {
+  if (USE_MOCK) {
+    await sleep(80);
+    return;
+  }
+
+  await http.delete("/admin/clearAll");
 }
 
 export async function createEventBand(payload: CreateEventBandDto): Promise<void> {

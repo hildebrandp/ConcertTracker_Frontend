@@ -206,6 +206,15 @@
           <button
             v-if="!isEditing"
             type="button"
+            class="danger"
+            :disabled="!venue"
+            @click="$emit('delete-venue')"
+          >
+            Delete venue
+          </button>
+          <button
+            v-if="!isEditing"
+            type="button"
             class="primary"
             :disabled="!venue"
             @click="isEditing = true"
@@ -240,6 +249,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "close"): void;
   (e: "save", payload: CreateConcertVenueDto): void;
+  (e: "delete-venue"): void;
 }>();
 
 const form = reactive({
@@ -623,6 +633,15 @@ function starFillValue(starIndex: number, rating: number) {
   cursor: pointer;
 }
 
+.danger {
+  border: 1px solid rgba(180, 0, 0, 0.4);
+  background: rgba(180, 0, 0, 0.08);
+  color: #7a0b0b;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
 .muted {
   color: rgba(0, 0, 0, 0.55);
   font-size: 13px;
@@ -649,7 +668,8 @@ function starFillValue(starIndex: number, rating: number) {
   }
 
   .primary,
-  .ghost {
+  .ghost,
+  .danger {
     width: 100%;
   }
 }

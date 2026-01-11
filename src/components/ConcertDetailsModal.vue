@@ -70,6 +70,15 @@
         <div v-if="error" class="error">
           {{ error }}
         </div>
+
+        <div class="modal-footer">
+          <button type="button" class="danger" @click="$emit('delete-event')">
+            Delete event
+          </button>
+          <button type="button" class="secondary" @click="$emit('update-event')">
+            Update event
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -82,6 +91,8 @@ import type { ConcertDetailsDto } from "../api/types";
 defineEmits<{
   (e: "close"): void;
   (e: "show-venue", venueId: number): void;
+  (e: "update-event"): void;
+  (e: "delete-event"): void;
 }>();
 
 const props = defineProps<{
@@ -143,7 +154,7 @@ function starFillValue(starIndex: number, rating: number) {
 }
 
 .title .name {
-  font-size: 16px;
+  font-size: 25px;
   font-weight: 700;
 }
 
@@ -234,5 +245,29 @@ function starFillValue(starIndex: number, rating: number) {
   background: rgba(180, 0, 0, 0.06);
   padding: 10px 12px;
   border-radius: 10px;
+}
+
+.modal-footer {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.secondary {
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background: #fff;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.danger {
+  border: 1px solid rgba(180, 0, 0, 0.4);
+  background: rgba(180, 0, 0, 0.08);
+  color: #7a0b0b;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
 }
 </style>

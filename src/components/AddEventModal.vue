@@ -2,7 +2,7 @@
   <div v-if="open" class="backdrop" @click.self="$emit('close')">
     <div class="modal" role="dialog" aria-modal="true">
       <div class="modal-header">
-        <div class="title">Add concert event</div>
+        <div class="title">{{ isUpdate ? "Update concert event" : "Add concert event" }}</div>
         <button class="close" type="button" @click="$emit('close')">Close</button>
       </div>
 
@@ -254,6 +254,22 @@
                 Main act
               </label>
               <div class="band-actions">
+                <button
+                  type="button"
+                  class="ghost"
+                  :disabled="index === 0"
+                  @click="moveBandUp(index)"
+                >
+                  Move up
+                </button>
+                <button
+                  type="button"
+                  class="ghost"
+                  :disabled="index === bandEntries.length - 1"
+                  @click="moveBandDown(index)"
+                >
+                  Move down
+                </button>
                 <button type="button" class="secondary" @click="toggleBandMode(band)">
                   {{ band.mode === "existing" ? "New band" : "Use existing" }}
                 </button>
@@ -364,6 +380,9 @@
         <div v-if="loadError" class="error">
           {{ loadError }}
         </div>
+        <div v-if="loadEventError" class="error">
+          {{ loadEventError }}
+        </div>
         <div v-if="error" class="error">
           {{ error }}
         </div>
@@ -371,7 +390,7 @@
         <div class="modal-footer">
           <button type="button" class="ghost" @click="$emit('close')">Cancel</button>
           <button type="submit" class="primary" :disabled="saving">
-            {{ saving ? "Saving..." : "Create event" }}
+            {{ saving ? "Saving..." : isUpdate ? "Update event" : "Create event" }}
           </button>
         </div>
 
@@ -388,20 +407,29 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import type { ConcertBandDto, ConcertVenueDto } from "../api/types";
+import type {
+  ConcertBandDto,
+  ConcertVenueDto,
+} from "../api/types";
 import {
   createConcertEventWithBands,
+  getConcertEventById,
   getConcertBands,
   getConcertVenues,
+  getEventBandsByEventIdDetails,
+  updateConcertEventWithBands,
 } from "../api/concertsApi";
 
 const props = defineProps<{
   open: boolean;
+  mode?: "create" | "update";
+  eventId?: number | null;
 }>();
 
 const emit = defineEmits<{
   (e: "close"): void;
   (e: "created"): void;
+  (e: "updated"): void;
 }>();
 
 const venues = ref<ConcertVenueDto[]>([]);
@@ -409,6 +437,8 @@ const bands = ref<ConcertBandDto[]>([]);
 const loaded = ref(false);
 const loading = ref(false);
 const loadError = ref<string | null>(null);
+const loadEventError = ref<string | null>(null);
+const isUpdate = computed(() => props.mode === "update");
 
 const eventName = ref("");
 const eventDatetime = ref(defaultEventDatetime());
@@ -536,6 +566,9 @@ watch(
 
     resetForm();
     await ensureLookups();
+    if (isUpdate.value && props.eventId) {
+      await loadEventForEdit(props.eventId);
+    }
   }
 );
 
@@ -559,6 +592,55 @@ async function ensureLookups() {
     loadError.value = e?.message ?? "Failed to load venues and bands.";
   } finally {
     loading.value = false;
+  }
+}
+
+async function loadEventForEdit(eventId: number) {
+  loadEventError.value = null;
+
+  try {
+    const [event, eventBands] = await Promise.all([
+      getConcertEventById(eventId),
+      getEventBandsByEventIdDetails(eventId),
+    ]);
+
+    eventName.value = event.name ?? "";
+    const rawDatetime = (event as any).datetime ?? (event as any).date ?? "";
+    eventDatetime.value = fromSqlDatetime(rawDatetime);
+    eventRating.value = event.rating !== null && event.rating !== undefined
+      ? String(event.rating)
+      : "";
+    eventNotes.value = event.notes ?? "";
+
+    selectedVenueId.value = event.venue_id ?? null;
+    const existingVenue = venues.value.find((venue) => venue.id === event.venue_id);
+    selectedVenueName.value = existingVenue?.name ?? "";
+    venueQuery.value = existingVenue?.name ?? "";
+
+    useNewVenue.value = false;
+
+    const sortedBands = [...eventBands].sort((a, b) => {
+      const orderA = a.runningOrder ?? Number.MAX_SAFE_INTEGER;
+      const orderB = b.runningOrder ?? Number.MAX_SAFE_INTEGER;
+      if (orderA === orderB) {
+        return a.band_name.localeCompare(b.band_name);
+      }
+      return orderA - orderB;
+    });
+
+    if (sortedBands.length > 0) {
+      bandEntries.value = sortedBands.map((band) => {
+        const entry = createBandEntry();
+        entry.mode = "existing";
+        entry.query = band.band_name ?? "";
+        entry.selectedBandId = band.band_id ?? null;
+        entry.selectedBandName = band.band_name ?? "";
+        entry.mainAct = Boolean(band.mainAct);
+        return entry;
+      });
+    }
+  } catch (e: any) {
+    loadEventError.value = e?.message ?? "Failed to load event details.";
   }
 }
 
@@ -596,6 +678,7 @@ function resetForm() {
   };
   bandEntries.value = [createBandEntry()];
   error.value = null;
+  loadEventError.value = null;
 }
 
 function createBandEntry(): BandEntry {
@@ -625,6 +708,18 @@ function addBand() {
 
 function removeBand(index: number) {
   bandEntries.value.splice(index, 1);
+}
+
+function moveBandUp(index: number) {
+  if (index <= 0) return;
+  const entries = bandEntries.value;
+  [entries[index - 1], entries[index]] = [entries[index], entries[index - 1]];
+}
+
+function moveBandDown(index: number) {
+  const entries = bandEntries.value;
+  if (index < 0 || index >= entries.length - 1) return;
+  [entries[index], entries[index + 1]] = [entries[index + 1], entries[index]];
 }
 
 function toggleBandMode(entry: BandEntry) {
@@ -679,6 +774,17 @@ function toSqlDatetime(value: string) {
   if (!time) return value;
   const normalizedTime = time.length === 5 ? `${time}:00` : time;
   return `${date} ${normalizedTime}`;
+}
+
+function fromSqlDatetime(value: string) {
+  const raw = toText(value).trim();
+  if (!raw) return "";
+  if (raw.includes("T")) {
+    return raw.slice(0, 16);
+  }
+  const [date, time] = raw.split(" ");
+  if (!time) return raw;
+  return `${date}T${time.slice(0, 5)}`;
 }
 
 function toText(value: unknown) {
@@ -909,12 +1015,20 @@ async function save() {
         : { venueId: selectedVenueId.value }),
     };
 
-    await createConcertEventWithBands(payload);
+    if (isUpdate.value) {
+      if (!props.eventId) {
+        throw new Error("Missing event id.");
+      }
+      await updateConcertEventWithBands(props.eventId, payload);
+      emit("updated");
+    } else {
+      await createConcertEventWithBands(payload);
+      emit("created");
+    }
 
-    emit("created");
     emit("close");
   } catch (e: any) {
-    error.value = e?.message ?? "Failed to create event.";
+    error.value = e?.message ?? "Failed to save event.";
   } finally {
     saving.value = false;
   }
@@ -1181,6 +1295,7 @@ async function save() {
 .band-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .band-flag {
@@ -1250,8 +1365,3 @@ async function save() {
   }
 }
 </style>
-
-
-
-
-

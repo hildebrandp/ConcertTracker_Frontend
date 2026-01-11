@@ -169,6 +169,15 @@
           <button
             v-if="!isEditing"
             type="button"
+            class="danger"
+            :disabled="!band"
+            @click="$emit('delete-band')"
+          >
+            Delete band
+          </button>
+          <button
+            v-if="!isEditing"
+            type="button"
             class="primary"
             :disabled="!band"
             @click="isEditing = true"
@@ -218,6 +227,7 @@ const emit = defineEmits<{
   (e: "close"): void;
   (e: "save", payload: CreateConcertBandDto): void;
   (e: "show-acts", bandName: string): void;
+  (e: "delete-band"): void;
 }>();
 
 const form = reactive({
@@ -590,6 +600,15 @@ function starFillValue(starIndex: number, rating: number) {
   cursor: pointer;
 }
 
+.danger {
+  border: 1px solid rgba(180, 0, 0, 0.4);
+  background: rgba(180, 0, 0, 0.08);
+  color: #7a0b0b;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
 .muted {
   color: rgba(0, 0, 0, 0.55);
   font-size: 13px;
@@ -616,7 +635,8 @@ function starFillValue(starIndex: number, rating: number) {
   }
 
   .primary,
-  .ghost {
+  .ghost,
+  .danger {
     width: 100%;
   }
 }
