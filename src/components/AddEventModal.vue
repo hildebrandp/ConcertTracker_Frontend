@@ -13,25 +13,49 @@
             <label for="event-name">Name <span class="required">*</span></label>
             <input id="event-name" v-model.trim="eventName" type="text" required />
           </div>
-          <div class="field">
-            <label for="event-datetime">Date & time <span class="required">*</span></label>
-            <input
-              id="event-datetime"
-              v-model="eventDatetime"
-              type="datetime-local"
-              required
-            />
-          </div>
-          <div class="field">
-            <label for="event-rating">Rating</label>
-            <input
-              id="event-rating"
-              v-model="eventRating"
-              type="number"
-              min="0"
-              max="10"
-              placeholder="0-10"
-            />
+          <div class="grid event-row">
+            <div class="field">
+              <label for="event-datetime">Date & time <span class="required">*</span></label>
+              <input
+                id="event-datetime"
+                v-model="eventDatetime"
+                type="datetime-local"
+                required
+              />
+            </div>
+            <div class="field">
+              <label for="event-rating">Rating</label>
+              <div
+                class="star-rating"
+                role="radiogroup"
+                aria-label="Event rating"
+                @mouseleave="eventHoverRating = null"
+              >
+                <span v-for="star in 5" :key="star" class="star">
+                  <span class="star-icon" :style="{ '--fill': `${eventStarFill(star)}%` }">
+                    *
+                  </span>
+                  <button
+                    type="button"
+                    class="half left"
+                    :aria-label="`Set rating to ${star * 2 - 1}`"
+                    @click="setEventRating(star * 2 - 1)"
+                    @mouseenter="setEventHover(star * 2 - 1)"
+                  ></button>
+                  <button
+                    type="button"
+                    class="half right"
+                    :aria-label="`Set rating to ${star * 2}`"
+                    @click="setEventRating(star * 2)"
+                    @mouseenter="setEventHover(star * 2)"
+                  ></button>
+                </span>
+                <button type="button" class="star-clear" @click="setEventRating(0)">
+                  Clear
+                </button>
+              </div>
+              <div class="rating-hint">0-10 (half stars)</div>
+            </div>
           </div>
           <div class="field">
             <label for="event-notes">Notes</label>
@@ -42,7 +66,9 @@
         <div class="section">
           <div class="section-title">Venue</div>
           <div class="field">
-            <label for="venue-search">Search venue <span v-if="!useNewVenue" class="required">*</span></label>
+            <label for="venue-search">
+              Search venue <span v-if="!useNewVenue" class="required">*</span>
+            </label>
             <input
               id="venue-search"
               v-model.trim="venueQuery"
@@ -72,72 +98,118 @@
             Create new venue
           </label>
 
-          <div v-if="useNewVenue" class="grid">
-            <div class="field">
-              <label for="venue-name">Name <span class="required">*</span></label>
-              <input id="venue-name" v-model.trim="venueForm.name" type="text" required />
+          <div v-if="useNewVenue" class="venue-grid">
+            <div class="grid venue-row">
+              <div class="field">
+                <label for="venue-name">Name <span class="required">*</span></label>
+                <input id="venue-name" v-model.trim="venueForm.name" type="text" required />
+              </div>
+              <div class="field">
+                <label for="venue-rating">Rating</label>
+                <div
+                  class="star-rating"
+                  role="radiogroup"
+                  aria-label="Venue rating"
+                  @mouseleave="venueHoverRating = null"
+                >
+                  <span v-for="star in 5" :key="star" class="star">
+                    <span class="star-icon" :style="{ '--fill': `${venueStarFill(star)}%` }">
+                      *
+                    </span>
+                    <button
+                      type="button"
+                      class="half left"
+                      :aria-label="`Set rating to ${star * 2 - 1}`"
+                      @click="setVenueRating(star * 2 - 1)"
+                      @mouseenter="setVenueHover(star * 2 - 1)"
+                    ></button>
+                    <button
+                      type="button"
+                      class="half right"
+                      :aria-label="`Set rating to ${star * 2}`"
+                      @click="setVenueRating(star * 2)"
+                      @mouseenter="setVenueHover(star * 2)"
+                    ></button>
+                  </span>
+                  <button type="button" class="star-clear" @click="setVenueRating(0)">
+                    Clear
+                  </button>
+                </div>
+                <div class="rating-hint">0-10 (half stars)</div>
+              </div>
             </div>
-            <div class="field">
-              <label for="venue-address">Address</label>
-              <input id="venue-address" v-model.trim="venueForm.address" type="text" />
+
+            <div class="grid venue-row">
+              <div class="field">
+                <label for="venue-type">Type</label>
+                <select id="venue-type" v-model="venueForm.type">
+                  <option value="">Select...</option>
+                  <option v-for="type in venueTypeOptions" :key="type" :value="type">
+                    {{ type }}
+                  </option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="venue-indoor">Indoor/Outdoor</label>
+                <select id="venue-indoor" v-model="venueForm.indoor_outdoor">
+                  <option value="">Select...</option>
+                  <option value="indoor">Indoor</option>
+                  <option value="outdoor">Outdoor</option>
+                  <option value="mixed">Mixed</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="venue-capacity">Capacity</label>
+                <input id="venue-capacity" v-model.trim="venueForm.capacity" type="text" />
+              </div>
             </div>
-            <div class="field">
-              <label for="venue-city">City</label>
-              <input id="venue-city" v-model.trim="venueForm.city" type="text" />
+
+            <div class="grid venue-row">
+              <div class="field full-row">
+                <label for="venue-website">Website</label>
+                <input id="venue-website" v-model.trim="venueForm.website" type="text" />
+              </div>
             </div>
-            <div class="field">
-              <label for="venue-state">State</label>
-              <input id="venue-state" v-model.trim="venueForm.state" type="text" />
+
+            <div class="venue-section">
+              <div class="venue-section-title">Address</div>
+              <div class="grid venue-address">
+                <div class="field">
+                  <label for="venue-address">Address</label>
+                  <input id="venue-address" v-model.trim="venueForm.address" type="text" />
+                </div>
+                <div class="field">
+                  <label for="venue-city">City</label>
+                  <input id="venue-city" v-model.trim="venueForm.city" type="text" />
+                </div>
+                <div class="field">
+                  <label for="venue-state">State</label>
+                  <input id="venue-state" v-model.trim="venueForm.state" type="text" />
+                </div>
+                <div class="field">
+                  <label for="venue-country">Country</label>
+                  <input id="venue-country" v-model.trim="venueForm.country" type="text" />
+                </div>
+                <div class="field">
+                  <label for="venue-postal">Postal code</label>
+                  <input id="venue-postal" v-model.trim="venueForm.postal_code" type="text" />
+                </div>
+                <div class="field">
+                  <label for="venue-latitude">Latitude</label>
+                  <input id="venue-latitude" v-model.trim="venueForm.latitude" type="text" />
+                </div>
+                <div class="field">
+                  <label for="venue-longitude">Longitude</label>
+                  <input id="venue-longitude" v-model.trim="venueForm.longitude" type="text" />
+                </div>
+              </div>
             </div>
-            <div class="field">
-              <label for="venue-country">Country</label>
-              <input id="venue-country" v-model.trim="venueForm.country" type="text" />
-            </div>
-            <div class="field">
-              <label for="venue-postal">Postal code</label>
-              <input id="venue-postal" v-model.trim="venueForm.postal_code" type="text" />
-            </div>
-            <div class="field">
-              <label for="venue-type">Type</label>
-              <select id="venue-type" v-model="venueForm.type">
-                <option value="">Select...</option>
-                <option v-for="type in venueTypeOptions" :key="type" :value="type">
-                  {{ type }}
-                </option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="venue-indoor">Indoor/Outdoor</label>
-              <select id="venue-indoor" v-model="venueForm.indoor_outdoor">
-                <option value="">Select...</option>
-                <option value="indoor">Indoor</option>
-                <option value="outdoor">Outdoor</option>
-                <option value="mixed">Mixed</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="venue-capacity">Capacity</label>
-              <input id="venue-capacity" v-model.trim="venueForm.capacity" type="text" />
-            </div>
-            <div class="field">
-              <label for="venue-website">Website</label>
-              <input id="venue-website" v-model.trim="venueForm.website" type="text" />
-            </div>
-            <div class="field">
-              <label for="venue-notes">Notes</label>
-              <textarea id="venue-notes" v-model.trim="venueForm.notes" rows="2" />
-            </div>
-            <div class="field">
-              <label for="venue-latitude">Latitude</label>
-              <input id="venue-latitude" v-model.trim="venueForm.latitude" type="text" />
-            </div>
-            <div class="field">
-              <label for="venue-longitude">Longitude</label>
-              <input id="venue-longitude" v-model.trim="venueForm.longitude" type="text" />
-            </div>
-            <div class="field">
-              <label for="venue-rating">Rating</label>
-              <input id="venue-rating" v-model.trim="venueForm.rating" type="text" />
+
+            <div class="grid venue-row">
+              <div class="field full-row">
+                <label for="venue-notes">Notes</label>
+                <textarea id="venue-notes" v-model.trim="venueForm.notes" rows="2" />
+              </div>
             </div>
           </div>
         </div>
@@ -206,11 +278,36 @@
               </div>
               <div class="field">
                 <label>Rating</label>
-                <input v-model.trim="band.newBand.rating" type="text" class="band-input" />
-              </div>
-              <div class="field">
-                <label>Notes</label>
-                <textarea v-model.trim="band.newBand.notes" rows="2" class="band-textarea" />
+                <div
+                  class="star-rating"
+                  role="radiogroup"
+                  aria-label="Band rating"
+                  @mouseleave="clearBandHover(band)"
+                >
+                  <span v-for="star in 5" :key="star" class="star">
+                    <span class="star-icon" :style="{ '--fill': `${bandStarFill(band, star)}%` }">
+                      *
+                    </span>
+                    <button
+                      type="button"
+                      class="half left"
+                      :aria-label="`Set rating to ${star * 2 - 1}`"
+                      @click="setBandRating(band, star * 2 - 1)"
+                      @mouseenter="setBandHover(band, star * 2 - 1)"
+                    ></button>
+                    <button
+                      type="button"
+                      class="half right"
+                      :aria-label="`Set rating to ${star * 2}`"
+                      @click="setBandRating(band, star * 2)"
+                      @mouseenter="setBandHover(band, star * 2)"
+                    ></button>
+                  </span>
+                  <button type="button" class="star-clear" @click="setBandRating(band, 0)">
+                    Clear
+                  </button>
+                </div>
+                <div class="rating-hint">0-10 (half stars)</div>
               </div>
               <div class="field">
                 <label>Link</label>
@@ -219,6 +316,10 @@
               <div class="field">
                 <label>Website</label>
                 <input v-model.trim="band.newBand.website" type="text" class="band-input" />
+              </div>
+              <div class="field full-row">
+                <label>Notes</label>
+                <textarea v-model.trim="band.newBand.notes" rows="2" class="band-textarea" />
               </div>
             </div>
           </div>
@@ -277,6 +378,9 @@ const eventName = ref("");
 const eventDatetime = ref(defaultEventDatetime());
 const eventRating = ref("");
 const eventNotes = ref("");
+const eventHoverRating = ref<number | null>(null);
+const venueHoverRating = ref<number | null>(null);
+const bandHoverRatings = ref<Record<number, number | null>>({});
 
 const venueQuery = ref("");
 const selectedVenueId = ref<number | null>(null);
@@ -530,6 +634,85 @@ function numberOrZero(value: unknown) {
   return Number.isFinite(num) ? num : 0;
 }
 
+const eventRatingValue = computed(() => {
+  const base = eventHoverRating.value ?? Number(eventRating.value);
+  if (!Number.isFinite(base)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(10, base));
+});
+
+const venueRatingValue = computed(() => {
+  const base = venueHoverRating.value ?? Number(venueForm.value.rating);
+  if (!Number.isFinite(base)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(10, base));
+});
+
+function setEventRating(value: number) {
+  if (value <= 0) {
+    eventRating.value = "";
+    return;
+  }
+  eventRating.value = String(value);
+}
+
+function setEventHover(value: number) {
+  eventHoverRating.value = value;
+}
+
+function eventStarFill(starIndex: number) {
+  const value = eventRatingValue.value;
+  const starValue = Math.max(0, Math.min(2, value - (starIndex - 1) * 2));
+  return (starValue / 2) * 100;
+}
+
+function setVenueRating(value: number) {
+  if (value <= 0) {
+    venueForm.value.rating = "";
+    return;
+  }
+  venueForm.value.rating = String(value);
+}
+
+function setVenueHover(value: number) {
+  venueHoverRating.value = value;
+}
+
+function venueStarFill(starIndex: number) {
+  const value = venueRatingValue.value;
+  const starValue = Math.max(0, Math.min(2, value - (starIndex - 1) * 2));
+  return (starValue / 2) * 100;
+}
+
+function setBandRating(entry: BandEntry, value: number) {
+  if (value <= 0) {
+    entry.newBand.rating = "";
+    return;
+  }
+  entry.newBand.rating = String(value);
+}
+
+function setBandHover(entry: BandEntry, value: number) {
+  bandHoverRatings.value[entry.localId] = value;
+}
+
+function clearBandHover(entry: BandEntry) {
+  bandHoverRatings.value[entry.localId] = null;
+}
+
+function bandStarFill(entry: BandEntry, starIndex: number) {
+  const hoverValue = bandHoverRatings.value[entry.localId];
+  const base = hoverValue ?? Number(entry.newBand.rating);
+  if (!Number.isFinite(base)) {
+    return 0;
+  }
+  const value = Math.max(0, Math.min(10, base));
+  const starValue = Math.max(0, Math.min(2, value - (starIndex - 1) * 2));
+  return (starValue / 2) * 100;
+}
+
 function validateForm() {
   if (!eventName.value.trim()) {
     return "Event name is required.";
@@ -722,6 +905,70 @@ async function save() {
   font-size: 14px;
 }
 
+.star-rating {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.star {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.star-icon {
+  position: relative;
+  font-size: 30px;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.2);
+}
+
+.star-icon::after {
+  content: "*";
+  position: absolute;
+  inset: 0;
+  width: var(--fill, 0%);
+  overflow: hidden;
+  color: #f5a623;
+}
+
+.half {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.half.left {
+  left: 0;
+}
+
+.half.right {
+  right: 0;
+}
+
+.star-clear {
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background: #fff;
+  border-radius: 999px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.rating-hint {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
 .required {
   color: #c62828;
   font-size: 12px;
@@ -731,6 +978,42 @@ async function save() {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
+}
+
+.event-row {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.full-row {
+  grid-column: 1 / -1;
+}
+
+.venue-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.venue-row {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.venue-section {
+  border: 1px dashed rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.venue-section-title {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.venue-address {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
 .suggestions {
@@ -849,6 +1132,11 @@ async function save() {
   }
 }
 </style>
+
+
+
+
+
 
 
 

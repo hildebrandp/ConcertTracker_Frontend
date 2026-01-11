@@ -26,7 +26,19 @@
             </div>
             <div class="detail">
               <div class="detail-label">Rating</div>
-              <div class="detail-value">{{ band.rating ?? "-" }}</div>
+              <div class="detail-value rating-display">
+                <span>{{ band.rating ?? "-" }}</span>
+                <div class="star-readonly" v-if="band.rating !== null && band.rating !== undefined">
+                  <span
+                    v-for="star in 5"
+                    :key="star"
+                    class="star-icon"
+                    :style="{ '--fill': `${starFillValue(star, band.rating)}%` }"
+                  >
+                    ★
+                  </span>
+                </div>
+              </div>
             </div>
             <div class="detail full">
               <div class="detail-label">Plex Link</div>
@@ -62,7 +74,39 @@
             </div>
             <div class="field">
               <label for="band-rating">Rating</label>
-              <input id="band-rating" v-model.trim="form.rating" type="text" />
+              <div
+                class="star-rating"
+                role="radiogroup"
+                aria-label="Band rating"
+                @mouseleave="hoverRating = null"
+              >
+                <span v-for="star in 5" :key="star" class="star">
+                  <span
+                    class="star-icon"
+                    :style="{ '--fill': `${starFill(star)}%` }"
+                  >
+                    ★
+                  </span>
+                  <button
+                    type="button"
+                    class="half left"
+                    :aria-label="`Set rating to ${star * 2 - 1}`"
+                    @click="setRating(star * 2 - 1)"
+                    @mouseenter="setHover(star * 2 - 1)"
+                  ></button>
+                  <button
+                    type="button"
+                    class="half right"
+                    :aria-label="`Set rating to ${star * 2}`"
+                    @click="setRating(star * 2)"
+                    @mouseenter="setHover(star * 2)"
+                  ></button>
+                </span>
+                <button type="button" class="star-clear" @click="setRating(0)">
+                  Clear
+                </button>
+              </div>
+              <div class="rating-hint">0-10 (half stars)</div>
             </div>
             <div class="field full">
               <label for="band-link">Plex Link</label>
@@ -108,7 +152,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, watch } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import type { ConcertBandDetailsDto, CreateConcertBandDto } from "../api/types";
 
 const props = defineProps<{
@@ -134,6 +178,15 @@ const form = reactive({
 });
 
 const isEditing = ref(false);
+const hoverRating = ref<number | null>(null);
+
+const ratingValue = computed(() => {
+  const base = hoverRating.value ?? Number(form.rating);
+  if (!Number.isFinite(base)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(10, base));
+});
 
 watch(
   () => [props.open, props.band],
@@ -186,6 +239,30 @@ function submit() {
     link: valueOrNull(form.link),
     website: valueOrNull(form.website),
   });
+}
+
+function setRating(value: number) {
+  if (value <= 0) {
+    form.rating = "";
+    return;
+  }
+  form.rating = String(value);
+}
+
+function setHover(value: number) {
+  hoverRating.value = value;
+}
+
+function starFill(starIndex: number) {
+  const value = ratingValue.value;
+  const starValue = Math.max(0, Math.min(2, value - (starIndex - 1) * 2));
+  return (starValue / 2) * 100;
+}
+
+function starFillValue(starIndex: number, rating: number) {
+  const value = Math.max(0, Math.min(10, rating));
+  const starValue = Math.max(0, Math.min(2, value - (starIndex - 1) * 2));
+  return (starValue / 2) * 100;
 }
 </script>
 
@@ -268,6 +345,17 @@ function submit() {
   font-size: 14px;
 }
 
+.rating-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.star-readonly {
+  display: flex;
+  gap: 4px;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -290,6 +378,70 @@ function submit() {
   border-radius: 8px;
   border: 1px solid rgba(0, 0, 0, 0.2);
   font-size: 14px;
+}
+
+.star-rating {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.star {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.star-icon {
+  position: relative;
+  font-size: 20px;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.2);
+}
+
+.star-icon::after {
+  content: "★";
+  position: absolute;
+  inset: 0;
+  width: var(--fill, 0%);
+  overflow: hidden;
+  color: #f5a623;
+}
+
+.half {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.half.left {
+  left: 0;
+}
+
+.half.right {
+  right: 0;
+}
+
+.star-clear {
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background: #fff;
+  border-radius: 999px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.rating-hint {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
 }
 
 .modal-footer {
