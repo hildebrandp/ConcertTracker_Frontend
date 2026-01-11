@@ -36,13 +36,26 @@
       </div>
 
       <div class="modal-body">
-        <div class="section">
+        <template v-if="details">
+          <div class="section">
+            <div class="section-title">Main Act</div>
+            <ul class="list">
+              <li v-for="b in mainActs" :key="b.id">{{ b.name }}</li>
+              <li v-if="mainActs.length === 0" class="muted">No main acts recorded.</li>
+            </ul>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Supporters</div>
+            <ul class="list">
+              <li v-for="b in supporters" :key="b.id">{{ b.name }}</li>
+              <li v-if="supporters.length === 0" class="muted">No supporters recorded.</li>
+            </ul>
+          </div>
+        </template>
+        <div v-else class="section">
           <div class="section-title">Bands</div>
-          <ul v-if="details" class="list">
-            <li v-for="b in details.bands" :key="b.id">{{ b.name }}</li>
-            <li v-if="details.bands.length === 0" class="muted">No bands recorded.</li>
-          </ul>
-          <div v-else class="muted">Loading...</div>
+          <div class="muted">Loading...</div>
         </div>
 
         <div class="section">
@@ -63,18 +76,36 @@
 </template>
 
 <script setup lang="ts">
+import { computed, toRefs } from "vue";
 import type { ConcertDetailsDto } from "../api/types";
-
-defineProps<{
-  open: boolean;
-  details: ConcertDetailsDto | null;
-  error: string | null;
-}>();
 
 defineEmits<{
   (e: "close"): void;
   (e: "show-venue", venueId: number): void;
 }>();
+
+const props = defineProps<{
+  open: boolean;
+  details: ConcertDetailsDto | null;
+  error: string | null;
+}>();
+
+const { open, details, error } = toRefs(props);
+
+const sortedBands = computed(() => {
+  if (!details.value) return [];
+  return [...details.value.bands].sort((a, b) => {
+    const orderA = a.runningOrder ?? -Infinity;
+    const orderB = b.runningOrder ?? -Infinity;
+    if (orderA === orderB) {
+      return a.name.localeCompare(b.name);
+    }
+    return orderB - orderA;
+  });
+});
+
+const mainActs = computed(() => sortedBands.value.filter((b) => b.mainAct));
+const supporters = computed(() => sortedBands.value.filter((b) => !b.mainAct));
 
 function starFillValue(starIndex: number, rating: number) {
   const value = Math.max(0, Math.min(10, rating));

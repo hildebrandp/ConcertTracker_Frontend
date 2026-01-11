@@ -174,6 +174,8 @@ export interface ConcertDetailsDto {
   bands: Array<{
     id: number;
     name: string;
+    mainAct?: boolean | null;
+    runningOrder?: number | null;
   }>;
 
   participatedWith: Array<{

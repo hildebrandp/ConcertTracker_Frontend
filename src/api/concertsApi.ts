@@ -165,9 +165,9 @@ const mockDetails: Record<number, ConcertDetailsDto> = {
     venueId: 1,
     venueName: "Some Arena",
     bands: [
-      { id: 1, name: "Heaven Shall Burn" },
-      { id: 2, name: "Support Band A" },
-      { id: 3, name: "Support Band B" },
+      { id: 1, name: "Heaven Shall Burn", mainAct: true, runningOrder: 3 },
+      { id: 2, name: "Support Band A", mainAct: false, runningOrder: 2 },
+      { id: 3, name: "Support Band B", mainAct: false, runningOrder: 1 },
     ],
     participatedWith: [
       { id: 10, displayName: "Pascal" },
