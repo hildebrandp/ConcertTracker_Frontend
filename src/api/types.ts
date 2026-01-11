@@ -141,6 +141,7 @@ export interface ConcertDetailsDto {
   date: string;
   name: string;
   rating: number;
+  venueId?: number;
   venueName?: string;
 
   bands: Array<{

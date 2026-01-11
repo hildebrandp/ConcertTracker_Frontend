@@ -210,6 +210,7 @@
       :details="selectedDetails"
       :error="detailsError"
       @close="closeDetails"
+      @show-venue="openVenueDetailsFromEvent"
     />
 
     <BandDetailsModal
@@ -324,6 +325,7 @@ const venueDetailsOpen = ref(false);
 const venueDetails = ref<ConcertVenueDetailsDto | null>(null);
 const venueDetailsError = ref<string | null>(null);
 const venueDetailsSaving = ref(false);
+const returnToEventDetails = ref(false);
 
 const createOpen = ref(false);
 async function loadAllConcerts() {
@@ -664,13 +666,30 @@ async function openDetails(concertId: number) {
   detailsError.value = null;
 
   try {
-    selectedDetails.value = await getConcertDetails(concertId);
+    const details = await getConcertDetails(concertId);
+    if (!details.venueId || !details.venueName) {
+      const fromList =
+        allConcerts.value.find((concert) => concert.id === concertId) ??
+        concerts.value.find((concert) => concert.id === concertId);
+      if (fromList?.venueId && !details.venueId) {
+        details.venueId = fromList.venueId;
+      }
+      if (fromList?.venueName && !details.venueName) {
+        details.venueName = fromList.venueName;
+      }
+    }
+    selectedDetails.value = details;
   } catch (e: any) {
     detailsError.value = e?.message ?? "Failed to load concert details.";
   }
 }
 
 function closeDetails() {
+  detailsOpen.value = false;
+}
+
+async function openVenueDetailsFromEvent(venueId: number) {
+  await openVenueDetails(venueId, true);
   detailsOpen.value = false;
 }
 
@@ -702,10 +721,11 @@ function closeBandDetails() {
   bandDetailsOpen.value = false;
 }
 
-async function openVenueDetails(venueId: number) {
+async function openVenueDetails(venueId: number, fromEvent = false) {
   venueDetailsOpen.value = true;
   venueDetails.value = null;
   venueDetailsError.value = null;
+  returnToEventDetails.value = fromEvent;
 
   try {
     venueDetails.value = await getConcertVenueById(venueId);
@@ -716,6 +736,10 @@ async function openVenueDetails(venueId: number) {
 
 function closeVenueDetails() {
   venueDetailsOpen.value = false;
+  if (returnToEventDetails.value && selectedDetails.value) {
+    detailsOpen.value = true;
+  }
+  returnToEventDetails.value = false;
 }
 
 async function jumpToBandActs(bandName: string) {
@@ -898,4 +922,3 @@ function closeCreate() {
   padding: 10px 12px;
   border-radius: 10px;
 }</style>
-

@@ -160,6 +160,7 @@ const mockDetails: Record<number, ConcertDetailsDto> = {
     date: "2025-12-19",
     name: "Heaven Shall Burn + Support",
     rating: 9,
+    venueId: 1,
     venueName: "Some Arena",
     bands: [
       { id: 1, name: "Heaven Shall Burn" },
@@ -303,6 +304,7 @@ export async function getConcertDetails(concertId: number): Promise<ConcertDetai
         date: "2025-01-01",
         name: `Concert #${concertId}`,
         rating: 0,
+        venueId: undefined,
         bands: [],
         participatedWith: [],
       };
@@ -318,7 +320,11 @@ export async function getConcertDetails(concertId: number): Promise<ConcertDetai
   const res = await http.get<ConcertDetailsDto>(
     `/concertEvents/${concertId}/details`
   );
-  return res.data;
+  const data = res.data as ConcertDetailsDto & { venue_id?: number };
+  return {
+    ...data,
+    venueId: data.venueId ?? data.venue_id,
+  };
 }
 
 export async function getConcertVenues(): Promise<ConcertVenueDto[]> {

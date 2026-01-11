@@ -3,11 +3,33 @@
     <div class="modal" role="dialog" aria-modal="true">
       <div class="modal-header">
         <div class="title">
-          <div class="name">{{ details?.name ?? "Loading…" }}</div>
-          <div class="meta">
-            <span v-if="details">{{ details.date.slice(0, 10) }} · Rating {{ details.rating }}</span>
-            <span v-if="details?.venueName"> · {{ details.venueName }}</span>
+          <div class="name">{{ details?.name ?? "Loading..." }}</div>
+          <div class="meta" v-if="details">
+            <span class="meta-item">{{ details.date.slice(0, 10) }}</span>
+            <span class="meta-sep">-</span>
+            <span class="meta-item">Rating {{ details.rating }}</span>
+            <span class="star-readonly" v-if="details.rating !== null && details.rating !== undefined">
+              <span
+                v-for="star in 5"
+                :key="star"
+                class="star-icon"
+                :style="{ '--fill': `${starFillValue(star, details.rating)}%` }"
+              >
+                &#9733;
+              </span>
+            </span>
+            <span v-if="details.venueName" class="meta-sep">-</span>
+            <button
+              v-if="details.venueName && details.venueId"
+              type="button"
+              class="meta-link"
+              @click="$emit('show-venue', details.venueId)"
+            >
+              {{ details.venueName }}
+            </button>
+            <span v-else-if="details.venueName" class="meta-item">{{ details.venueName }}</span>
           </div>
+          <div v-else class="meta muted">Loading...</div>
         </div>
 
         <button class="close" type="button" @click="$emit('close')">Close</button>
@@ -20,7 +42,7 @@
             <li v-for="b in details.bands" :key="b.id">{{ b.name }}</li>
             <li v-if="details.bands.length === 0" class="muted">No bands recorded.</li>
           </ul>
-          <div v-else class="muted">Loading…</div>
+          <div v-else class="muted">Loading...</div>
         </div>
 
         <div class="section">
@@ -29,7 +51,7 @@
             <li v-for="p in details.participatedWith" :key="p.id">{{ p.displayName }}</li>
             <li v-if="details.participatedWith.length === 0" class="muted">No participants recorded.</li>
           </ul>
-          <div v-else class="muted">Loading…</div>
+          <div v-else class="muted">Loading...</div>
         </div>
 
         <div v-if="error" class="error">
@@ -51,7 +73,14 @@ defineProps<{
 
 defineEmits<{
   (e: "close"): void;
+  (e: "show-venue", venueId: number): void;
 }>();
+
+function starFillValue(starIndex: number, rating: number) {
+  const value = Math.max(0, Math.min(10, rating));
+  const starValue = Math.max(0, Math.min(2, value - (starIndex - 1) * 2));
+  return (starValue / 2) * 100;
+}
 </script>
 
 <style scoped>
@@ -91,6 +120,45 @@ defineEmits<{
   margin-top: 4px;
   font-size: 12px;
   color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.meta-sep {
+  color: rgba(0, 0, 0, 0.3);
+}
+
+.meta-link {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: #0b4da2;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.star-readonly {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.star-icon {
+  position: relative;
+  font-size: 16px;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.2);
+}
+
+.star-icon::after {
+  content: "\2605";
+  position: absolute;
+  inset: 0;
+  width: var(--fill, 0%);
+  overflow: hidden;
+  color: #f5a623;
 }
 
 .close {
