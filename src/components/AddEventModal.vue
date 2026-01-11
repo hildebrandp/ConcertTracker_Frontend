@@ -33,7 +33,7 @@
               >
                 <span v-for="star in 5" :key="star" class="star">
                   <span class="star-icon" :style="{ '--fill': `${eventStarFill(star)}%` }">
-                    *
+                    &#9733;
                   </span>
                   <button
                     type="button"
@@ -114,8 +114,8 @@
                 >
                   <span v-for="star in 5" :key="star" class="star">
                     <span class="star-icon" :style="{ '--fill': `${venueStarFill(star)}%` }">
-                      *
-                    </span>
+                    &#9733;
+                  </span>
                     <button
                       type="button"
                       class="half left"
@@ -286,8 +286,8 @@
                 >
                   <span v-for="star in 5" :key="star" class="star">
                     <span class="star-icon" :style="{ '--fill': `${bandStarFill(band, star)}%` }">
-                      *
-                    </span>
+                    &#9733;
+                  </span>
                     <button
                       type="button"
                       class="half left"
@@ -929,7 +929,7 @@ async function save() {
 }
 
 .star-icon::after {
-  content: "*";
+  content: "\2605";
   position: absolute;
   inset: 0;
   width: var(--fill, 0%);
@@ -1132,6 +1132,9 @@ async function save() {
   }
 }
 </style>
+
+
+
 
 
 
