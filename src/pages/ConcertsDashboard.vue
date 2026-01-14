@@ -1401,10 +1401,12 @@ async function handleEventUpdated() {
 }
 
 .filter-row input {
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 6px 10px;
   min-width: 240px;
+  background: var(--card);
+  color: var(--text);
 }
 
 .pager-group {
