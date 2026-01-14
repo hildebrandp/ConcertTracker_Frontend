@@ -8,11 +8,76 @@
     <table class="table">
       <thead>
         <tr>
-          <th style="width: 160px">Date</th>
-          <th>Concert</th>
-          <th style="width: 200px">Venue</th>
-          <th style="width: 90px">Bands</th>
-          <th style="width: 120px">Rating</th>
+          <th style="width: 160px" :aria-sort="sortable ? ariaSort('date') : undefined">
+            <button
+              v-if="sortable"
+              class="sort-button"
+              type="button"
+              @click="requestSort('date')"
+            >
+              Date
+              <span class="sort-indicator" aria-hidden="true">
+                {{ sortIndicator("date") }}
+              </span>
+            </button>
+            <span v-else>Date</span>
+          </th>
+          <th :aria-sort="sortable ? ariaSort('name') : undefined">
+            <button
+              v-if="sortable"
+              class="sort-button"
+              type="button"
+              @click="requestSort('name')"
+            >
+              Concert
+              <span class="sort-indicator" aria-hidden="true">
+                {{ sortIndicator("name") }}
+              </span>
+            </button>
+            <span v-else>Concert</span>
+          </th>
+          <th style="width: 200px" :aria-sort="sortable ? ariaSort('venue') : undefined">
+            <button
+              v-if="sortable"
+              class="sort-button"
+              type="button"
+              @click="requestSort('venue')"
+            >
+              Venue
+              <span class="sort-indicator" aria-hidden="true">
+                {{ sortIndicator("venue") }}
+              </span>
+            </button>
+            <span v-else>Venue</span>
+          </th>
+          <th style="width: 90px" :aria-sort="sortable ? ariaSort('bands') : undefined">
+            <button
+              v-if="sortable"
+              class="sort-button"
+              type="button"
+              @click="requestSort('bands')"
+            >
+              Bands
+              <span class="sort-indicator" aria-hidden="true">
+                {{ sortIndicator("bands") }}
+              </span>
+            </button>
+            <span v-else>Bands</span>
+          </th>
+          <th style="width: 120px" :aria-sort="sortable ? ariaSort('rating') : undefined">
+            <button
+              v-if="sortable"
+              class="sort-button"
+              type="button"
+              @click="requestSort('rating')"
+            >
+              Rating
+              <span class="sort-indicator" aria-hidden="true">
+                {{ sortIndicator("rating") }}
+              </span>
+            </button>
+            <span v-else>Rating</span>
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -42,23 +107,47 @@
 </template>
 
 <script setup lang="ts">
+import { toRefs } from "vue";
 import type { ConcertListItemDto } from "../api/types";
 
-const { title, hint } = withDefaults(
+const props = withDefaults(
   defineProps<{
     concerts: ConcertListItemDto[];
     title?: string;
     hint?: string;
+    sortable?: boolean;
+    sortKey?: "date" | "name" | "venue" | "bands" | "rating";
+    sortDir?: "asc" | "desc";
   }>(),
   {
     title: "All attended Concerts",
     hint: "Click a row to see details",
+    sortable: true,
+    sortKey: "date",
+    sortDir: "desc",
   }
 );
+const { concerts, title, hint, sortable, sortKey, sortDir } = toRefs(props);
 
-defineEmits<{
+const emit = defineEmits<{
   (e: "select", concertId: number): void;
+  (e: "sort-change", key: "date" | "name" | "venue" | "bands" | "rating"): void;
 }>();
+
+function requestSort(key: "date" | "name" | "venue" | "bands" | "rating") {
+  if (!sortable.value) return;
+  emit("sort-change", key);
+}
+
+function sortIndicator(key: "date" | "name" | "venue" | "bands" | "rating") {
+  if (sortKey.value !== key) return "";
+  return sortDir.value === "asc" ? "^" : "v";
+}
+
+function ariaSort(key: "date" | "name" | "venue" | "bands" | "rating") {
+  if (sortKey.value !== key) return "none";
+  return sortDir.value === "asc" ? "ascending" : "descending";
+}
 
 function formatDate(iso: string) {
   // Simple, stable formatting without timezone surprises for YYYY-MM-DD
@@ -103,6 +192,25 @@ function formatDate(iso: string) {
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   text-align: left;
   font-size: 14px;
+}
+
+.sort-button {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sort-indicator {
+  font-size: 12px;
+  opacity: 0.6;
+  min-width: 8px;
+  text-align: left;
 }
 
 .row {

@@ -8,11 +8,46 @@
     <table class="table">
       <thead>
         <tr>
-          <th>Band</th>
-          <th style="width: 160px">Last seen</th>
-          <th style="width: 90px">Count</th>
-          <th style="width: 120px">Rating</th>
-          <th style="width: 200px">Last venue</th>
+          <th :aria-sort="ariaSort('band')">
+            <button class="sort-button" type="button" @click="requestSort('band')">
+              Band
+              <span class="sort-indicator" aria-hidden="true">
+                {{ sortIndicator("band") }}
+              </span>
+            </button>
+          </th>
+          <th style="width: 160px" :aria-sort="ariaSort('lastSeen')">
+            <button class="sort-button" type="button" @click="requestSort('lastSeen')">
+              Last seen
+              <span class="sort-indicator" aria-hidden="true">
+                {{ sortIndicator("lastSeen") }}
+              </span>
+            </button>
+          </th>
+          <th style="width: 90px" :aria-sort="ariaSort('count')">
+            <button class="sort-button" type="button" @click="requestSort('count')">
+              Count
+              <span class="sort-indicator" aria-hidden="true">
+                {{ sortIndicator("count") }}
+              </span>
+            </button>
+          </th>
+          <th style="width: 120px" :aria-sort="ariaSort('rating')">
+            <button class="sort-button" type="button" @click="requestSort('rating')">
+              Rating
+              <span class="sort-indicator" aria-hidden="true">
+                {{ sortIndicator("rating") }}
+              </span>
+            </button>
+          </th>
+          <th style="width: 200px" :aria-sort="ariaSort('venue')">
+            <button class="sort-button" type="button" @click="requestSort('venue')">
+              Last venue
+              <span class="sort-indicator" aria-hidden="true">
+                {{ sortIndicator("venue") }}
+              </span>
+            </button>
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -42,23 +77,44 @@
 </template>
 
 <script setup lang="ts">
+import { toRefs } from "vue";
 import type { BandSummaryDto } from "../api/types";
 
-const { title, hint } = withDefaults(
+const props = withDefaults(
   defineProps<{
     bands: BandSummaryDto[];
     title?: string;
     hint?: string;
+    sortKey?: "band" | "lastSeen" | "count" | "rating" | "venue";
+    sortDir?: "asc" | "desc";
   }>(),
   {
     title: "Seen Bands",
     hint: "Showing unique bands",
+    sortKey: "band",
+    sortDir: "asc",
   }
 );
+const { bands, title, hint, sortKey, sortDir } = toRefs(props);
 
-defineEmits<{
+const emit = defineEmits<{
   (e: "select", bandId: number): void;
+  (e: "sort-change", key: "band" | "lastSeen" | "count" | "rating" | "venue"): void;
 }>();
+
+function requestSort(key: "band" | "lastSeen" | "count" | "rating" | "venue") {
+  emit("sort-change", key);
+}
+
+function sortIndicator(key: "band" | "lastSeen" | "count" | "rating" | "venue") {
+  if (sortKey.value !== key) return "";
+  return sortDir.value === "asc" ? "^" : "v";
+}
+
+function ariaSort(key: "band" | "lastSeen" | "count" | "rating" | "venue") {
+  if (sortKey.value !== key) return "none";
+  return sortDir.value === "asc" ? "ascending" : "descending";
+}
 
 function formatDate(iso: string) {
   return iso.length >= 10 ? iso.slice(0, 10) : iso;
@@ -102,6 +158,25 @@ function formatDate(iso: string) {
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   text-align: left;
   font-size: 14px;
+}
+
+.sort-button {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sort-indicator {
+  font-size: 12px;
+  opacity: 0.6;
+  min-width: 8px;
+  text-align: left;
 }
 
 .row:hover {

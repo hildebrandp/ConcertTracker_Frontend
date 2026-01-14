@@ -8,10 +8,38 @@
     <table class="table">
       <thead>
         <tr>
-          <th>Venue</th>
-          <th style="width: 160px">Last visited</th>
-          <th style="width: 90px">Count</th>
-          <th style="width: 120px">Rating</th>
+          <th :aria-sort="ariaSort('venue')">
+            <button class="sort-button" type="button" @click="requestSort('venue')">
+              Venue
+              <span class="sort-indicator" aria-hidden="true">
+                {{ sortIndicator("venue") }}
+              </span>
+            </button>
+          </th>
+          <th style="width: 160px" :aria-sort="ariaSort('lastVisited')">
+            <button class="sort-button" type="button" @click="requestSort('lastVisited')">
+              Last visited
+              <span class="sort-indicator" aria-hidden="true">
+                {{ sortIndicator("lastVisited") }}
+              </span>
+            </button>
+          </th>
+          <th style="width: 90px" :aria-sort="ariaSort('count')">
+            <button class="sort-button" type="button" @click="requestSort('count')">
+              Count
+              <span class="sort-indicator" aria-hidden="true">
+                {{ sortIndicator("count") }}
+              </span>
+            </button>
+          </th>
+          <th style="width: 120px" :aria-sort="ariaSort('rating')">
+            <button class="sort-button" type="button" @click="requestSort('rating')">
+              Rating
+              <span class="sort-indicator" aria-hidden="true">
+                {{ sortIndicator("rating") }}
+              </span>
+            </button>
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -40,23 +68,44 @@
 </template>
 
 <script setup lang="ts">
+import { toRefs } from "vue";
 import type { VenueSummaryDto } from "../api/types";
 
-const { title, hint } = withDefaults(
+const props = withDefaults(
   defineProps<{
     venues: VenueSummaryDto[];
     title?: string;
     hint?: string;
+    sortKey?: "venue" | "lastVisited" | "count" | "rating";
+    sortDir?: "asc" | "desc";
   }>(),
   {
     title: "Visited Venues",
     hint: "Showing all venues",
+    sortKey: "venue",
+    sortDir: "asc",
   }
 );
+const { venues, title, hint, sortKey, sortDir } = toRefs(props);
 
-defineEmits<{
+const emit = defineEmits<{
   (e: "select", venueId: number): void;
+  (e: "sort-change", key: "venue" | "lastVisited" | "count" | "rating"): void;
 }>();
+
+function requestSort(key: "venue" | "lastVisited" | "count" | "rating") {
+  emit("sort-change", key);
+}
+
+function sortIndicator(key: "venue" | "lastVisited" | "count" | "rating") {
+  if (sortKey.value !== key) return "";
+  return sortDir.value === "asc" ? "^" : "v";
+}
+
+function ariaSort(key: "venue" | "lastVisited" | "count" | "rating") {
+  if (sortKey.value !== key) return "none";
+  return sortDir.value === "asc" ? "ascending" : "descending";
+}
 
 function formatDate(iso?: string | null) {
   if (!iso) return "-";
@@ -101,6 +150,25 @@ function formatDate(iso?: string | null) {
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   text-align: left;
   font-size: 14px;
+}
+
+.sort-button {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sort-indicator {
+  font-size: 12px;
+  opacity: 0.6;
+  min-width: 8px;
+  text-align: left;
 }
 
 .row:hover {

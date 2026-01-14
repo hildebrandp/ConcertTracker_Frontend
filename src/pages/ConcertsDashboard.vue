@@ -6,6 +6,10 @@
         <div class="sub">Overview and recent activity</div>
       </div>
       <div class="header-actions">
+        <label class="theme-toggle">
+          <input v-model="darkMode" type="checkbox" />
+          <span>Dark mode</span>
+        </label>
         <button class="danger" type="button" @click="confirmClearAll">
           Delete all data
         </button>
@@ -27,6 +31,7 @@
       v-if="!allConcertsOpen && !allBandsOpen && !allActsOpen && !allVenuesOpen"
       :concerts="concerts"
       title="Last 10 Concerts"
+      :sortable="false"
       @select="openDetails"
     />
 
@@ -36,6 +41,16 @@
           Back to dashboard
         </button>
         <div v-if="allConcertsLoading" class="hint">Loading all concerts...</div>
+      </div>
+
+      <div class="filter-row">
+        <label class="filter-label" for="concerts-search">Search</label>
+        <input
+          id="concerts-search"
+          v-model.trim="concertsSearch"
+          type="text"
+          placeholder="Filter by concert name..."
+        />
       </div>
 
       <div class="pager">
@@ -70,6 +85,9 @@
 
       <ConcertsTable
         :concerts="paginatedConcerts"
+        :sort-key="concertsSortKey"
+        :sort-dir="concertsSortDir"
+        @sort-change="setConcertsSort"
         @select="openDetails"
       />
 
@@ -128,6 +146,9 @@
 
       <BandsTable
         :bands="paginatedBands"
+        :sort-key="bandsSortKey"
+        :sort-dir="bandsSortDir"
+        @sort-change="setBandsSort"
         @select="openBandDetails"
       />
 
@@ -186,6 +207,9 @@
 
       <EventBandsTable
         :entries="paginatedActs"
+        :sort-key="actsSortKey"
+        :sort-dir="actsSortDir"
+        @sort-change="setActsSort"
       />
 
       <div v-if="allActsError" class="error">
@@ -201,8 +225,51 @@
         <div v-if="allVenuesLoading" class="hint">Loading venues...</div>
       </div>
 
+      <div class="filter-row">
+        <label class="filter-label" for="venues-search">Search</label>
+        <input
+          id="venues-search"
+          v-model.trim="venuesSearch"
+          type="text"
+          placeholder="Filter by venue name..."
+        />
+      </div>
+
+      <div class="pager">
+        <div class="pager-group">
+          <label class="pager-label" for="venues-page-size">Per page</label>
+          <select id="venues-page-size" v-model="venuesPageSize">
+            <option v-for="option in venuesPageSizeOptions" :key="option" :value="option">
+              {{ option }}
+            </option>
+          </select>
+        </div>
+        <div class="pager-group">
+          <button
+            class="secondary"
+            type="button"
+            :disabled="isAllVenuesPages || venuesPage === 1"
+            @click="prevVenuesPage"
+          >
+            Prev
+          </button>
+          <div class="pager-meta">Page {{ venuesPage }} of {{ totalVenuesPages }}</div>
+          <button
+            class="secondary"
+            type="button"
+            :disabled="isAllVenuesPages || venuesPage === totalVenuesPages"
+            @click="nextVenuesPage"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+
       <VenuesTable
-        :venues="allVenues"
+        :venues="paginatedVenues"
+        :sort-key="venuesSortKey"
+        :sort-dir="venuesSortDir"
+        @sort-change="setVenuesSort"
         @select="openVenueDetails"
       />
 
@@ -308,6 +375,9 @@ const allConcertsError = ref<string | null>(null);
 const pageSizeOptions = ["10", "20", "50", "100", "200", "All"] as const;
 const pageSize = ref<(typeof pageSizeOptions)[number]>("20");
 const currentPage = ref(1);
+const concertsSearch = ref("");
+const concertsSortKey = ref<"date" | "name" | "venue" | "bands" | "rating">("date");
+const concertsSortDir = ref<"asc" | "desc">("desc");
 const allBands = ref<BandSummaryDto[]>([]);
 const allBandsOpen = ref(false);
 const allBandsLoading = ref(false);
@@ -316,6 +386,8 @@ const bandPageSizeOptions = ["10", "20", "50", "100", "200", "All"] as const;
 const bandPageSize = ref<(typeof bandPageSizeOptions)[number]>("20");
 const bandPage = ref(1);
 const bandsSearch = ref("");
+const bandsSortKey = ref<"band" | "lastSeen" | "count" | "rating" | "venue">("band");
+const bandsSortDir = ref<"asc" | "desc">("asc");
 const allActs = ref<EventBandSummaryDto[]>([]);
 const allActsOpen = ref(false);
 const allActsLoading = ref(false);
@@ -324,10 +396,18 @@ const actsPageSizeOptions = ["10", "20", "50", "100", "200", "All"] as const;
 const actsPageSize = ref<(typeof actsPageSizeOptions)[number]>("20");
 const actsPage = ref(1);
 const actsSearch = ref("");
+const actsSortKey = ref<"date" | "band" | "venue" | "rating">("date");
+const actsSortDir = ref<"asc" | "desc">("desc");
 const allVenues = ref<VenueSummaryDto[]>([]);
 const allVenuesOpen = ref(false);
 const allVenuesLoading = ref(false);
 const allVenuesError = ref<string | null>(null);
+const venuesSearch = ref("");
+const venuesPageSizeOptions = ["10", "20", "50", "100", "200", "All"] as const;
+const venuesPageSize = ref<(typeof venuesPageSizeOptions)[number]>("20");
+const venuesPage = ref(1);
+const venuesSortKey = ref<"venue" | "lastVisited" | "count" | "rating">("venue");
+const venuesSortDir = ref<"asc" | "desc">("asc");
 
 const detailsOpen = ref(false);
 const selectedDetails = ref<ConcertDetailsDto | null>(null);
@@ -348,6 +428,7 @@ const createOpen = ref(false);
 const updateOpen = ref(false);
 const updateEventId = ref<number | null>(null);
 const reopenEventId = ref<number | null>(null);
+const darkMode = ref(false);
 async function loadAllConcerts() {
   allConcertsLoading.value = true;
   allConcertsError.value = null;
@@ -522,22 +603,64 @@ function closeAllVenues() {
 const isAllPages = computed(() => pageSize.value === "All");
 const isAllBandPages = computed(() => bandPageSize.value === "All");
 const isAllActsPages = computed(() => actsPageSize.value === "All");
+const isAllVenuesPages = computed(() => venuesPageSize.value === "All");
 
 const totalPages = computed(() => {
   if (isAllPages.value) {
     return 1;
   }
   const size = Number(pageSize.value);
-  return Math.max(1, Math.ceil(allConcerts.value.length / size));
+  return Math.max(1, Math.ceil(filteredConcerts.value.length / size));
+});
+
+const filteredConcerts = computed(() => {
+  const q = concertsSearch.value.trim().toLowerCase();
+  if (!q) {
+    return allConcerts.value;
+  }
+  return allConcerts.value.filter((concert) =>
+    concert.name.toLowerCase().includes(q)
+  );
+});
+
+const sortedConcerts = computed(() => {
+  const dir = concertsSortDir.value === "asc" ? 1 : -1;
+  return [...filteredConcerts.value].sort((a, b) => {
+    let result = 0;
+    switch (concertsSortKey.value) {
+      case "date":
+        result = compareNullable(a.date, b.date, (x, y) => x.localeCompare(y));
+        break;
+      case "name":
+        result = compareNullable(a.name, b.name, (x, y) => x.localeCompare(y));
+        break;
+      case "venue":
+        result = compareNullable(
+          a.venueName,
+          b.venueName,
+          (x, y) => x.localeCompare(y)
+        );
+        break;
+      case "bands":
+        result = compareNullable(a.bandCount, b.bandCount, (x, y) => x - y);
+        break;
+      case "rating":
+        result = compareNullable(a.rating, b.rating, (x, y) => x - y);
+        break;
+      default:
+        result = 0;
+    }
+    return result * dir;
+  });
 });
 
 const paginatedConcerts = computed(() => {
   if (isAllPages.value) {
-    return allConcerts.value;
+    return sortedConcerts.value;
   }
   const size = Number(pageSize.value);
   const start = (currentPage.value - 1) * size;
-  return allConcerts.value.slice(start, start + size);
+  return sortedConcerts.value.slice(start, start + size);
 });
 
 const totalBandPages = computed(() => {
@@ -558,13 +681,52 @@ const filteredBands = computed(() => {
   return [...bandsList].sort((a, b) => a.band_name.localeCompare(b.band_name));
 });
 
+const sortedBands = computed(() => {
+  const dir = bandsSortDir.value === "asc" ? 1 : -1;
+  return [...filteredBands.value].sort((a, b) => {
+    let result = 0;
+    switch (bandsSortKey.value) {
+      case "band":
+        result = compareNullable(
+          a.band_name,
+          b.band_name,
+          (x, y) => x.localeCompare(y)
+        );
+        break;
+      case "lastSeen":
+        result = compareNullable(
+          a.last_seen_date,
+          b.last_seen_date,
+          (x, y) => x.localeCompare(y)
+        );
+        break;
+      case "count":
+        result = compareNullable(a.seen_count, b.seen_count, (x, y) => x - y);
+        break;
+      case "rating":
+        result = compareNullable(a.rating, b.rating, (x, y) => x - y);
+        break;
+      case "venue":
+        result = compareNullable(
+          a.last_venue_name,
+          b.last_venue_name,
+          (x, y) => x.localeCompare(y)
+        );
+        break;
+      default:
+        result = 0;
+    }
+    return result * dir;
+  });
+});
+
 const paginatedBands = computed(() => {
   if (isAllBandPages.value) {
-    return filteredBands.value;
+    return sortedBands.value;
   }
   const size = Number(bandPageSize.value);
   const start = (bandPage.value - 1) * size;
-  return filteredBands.value.slice(start, start + size);
+  return sortedBands.value.slice(start, start + size);
 });
 
 const totalActsPages = computed(() => {
@@ -573,6 +735,14 @@ const totalActsPages = computed(() => {
   }
   const size = Number(actsPageSize.value);
   return Math.max(1, Math.ceil(filteredActs.value.length / size));
+});
+
+const totalVenuesPages = computed(() => {
+  if (isAllVenuesPages.value) {
+    return 1;
+  }
+  const size = Number(venuesPageSize.value);
+  return Math.max(1, Math.ceil(filteredVenues.value.length / size));
 });
 
 const filteredActs = computed(() => {
@@ -585,16 +755,107 @@ const filteredActs = computed(() => {
   );
 });
 
+const sortedActs = computed(() => {
+  const dir = actsSortDir.value === "asc" ? 1 : -1;
+  return [...filteredActs.value].sort((a, b) => {
+    let result = 0;
+    switch (actsSortKey.value) {
+      case "date":
+        result = compareNullable(a.date, b.date, (x, y) => x.localeCompare(y));
+        break;
+      case "band":
+        result = compareNullable(
+          a.band_name,
+          b.band_name,
+          (x, y) => x.localeCompare(y)
+        );
+        break;
+      case "venue":
+        result = compareNullable(
+          a.venue_name,
+          b.venue_name,
+          (x, y) => x.localeCompare(y)
+        );
+        break;
+      case "rating":
+        result = compareNullable(a.rating, b.rating, (x, y) => x - y);
+        break;
+      default:
+        result = 0;
+    }
+    return result * dir;
+  });
+});
+
 const paginatedActs = computed(() => {
   if (isAllActsPages.value) {
-    return filteredActs.value;
+    return sortedActs.value;
   }
   const size = Number(actsPageSize.value);
   const start = (actsPage.value - 1) * size;
-  return filteredActs.value.slice(start, start + size);
+  return sortedActs.value.slice(start, start + size);
+});
+
+const filteredVenues = computed(() => {
+  const q = venuesSearch.value.trim().toLowerCase();
+  if (!q) {
+    return allVenues.value;
+  }
+  return allVenues.value.filter((venue) =>
+    venue.venue_name.toLowerCase().includes(q)
+  );
+});
+
+const sortedVenues = computed(() => {
+  const dir = venuesSortDir.value === "asc" ? 1 : -1;
+  return [...filteredVenues.value].sort((a, b) => {
+    let result = 0;
+    switch (venuesSortKey.value) {
+      case "venue":
+        result = compareNullable(
+          a.venue_name,
+          b.venue_name,
+          (x, y) => x.localeCompare(y)
+        );
+        break;
+      case "lastVisited":
+        result = compareNullable(
+          a.last_visited_date,
+          b.last_visited_date,
+          (x, y) => x.localeCompare(y)
+        );
+        break;
+      case "count":
+        result = compareNullable(a.visit_count, b.visit_count, (x, y) => x - y);
+        break;
+      case "rating":
+        result = compareNullable(a.rating, b.rating, (x, y) => x - y);
+        break;
+      default:
+        result = 0;
+    }
+    return result * dir;
+  });
+});
+
+const paginatedVenues = computed(() => {
+  if (isAllVenuesPages.value) {
+    return sortedVenues.value;
+  }
+  const size = Number(venuesPageSize.value);
+  const start = (venuesPage.value - 1) * size;
+  return sortedVenues.value.slice(start, start + size);
 });
 
 watch([pageSize, allConcerts], () => {
+  currentPage.value = 1;
+});
+
+watch([concertsSearch], () => {
+  currentPage.value = 1;
+});
+
+watch([concertsSortKey, concertsSortDir], () => {
   currentPage.value = 1;
 });
 
@@ -608,6 +869,10 @@ watch([bandPageSize, allBands, bandsSearch], () => {
   bandPage.value = 1;
 });
 
+watch([bandsSortKey, bandsSortDir], () => {
+  bandPage.value = 1;
+});
+
 watch(totalBandPages, (nextTotal) => {
   if (bandPage.value > nextTotal) {
     bandPage.value = nextTotal;
@@ -618,11 +883,88 @@ watch([actsPageSize, allActs, actsSearch], () => {
   actsPage.value = 1;
 });
 
+watch([actsSortKey, actsSortDir], () => {
+  actsPage.value = 1;
+});
+
 watch(totalActsPages, (nextTotal) => {
   if (actsPage.value > nextTotal) {
     actsPage.value = nextTotal;
   }
 });
+
+watch([venuesPageSize, allVenues, venuesSearch], () => {
+  venuesPage.value = 1;
+});
+
+watch([venuesSortKey, venuesSortDir], () => {
+  venuesPage.value = 1;
+});
+
+watch(totalVenuesPages, (nextTotal) => {
+  if (venuesPage.value > nextTotal) {
+    venuesPage.value = nextTotal;
+  }
+});
+
+function setConcertsSort(key: "date" | "name" | "venue" | "bands" | "rating") {
+  toggleSort(key, concertsSortKey, concertsSortDir, defaultConcertsSortDir);
+}
+
+function setBandsSort(key: "band" | "lastSeen" | "count" | "rating" | "venue") {
+  toggleSort(key, bandsSortKey, bandsSortDir, defaultBandsSortDir);
+}
+
+function setActsSort(key: "date" | "band" | "venue" | "rating") {
+  toggleSort(key, actsSortKey, actsSortDir, defaultActsSortDir);
+}
+
+function setVenuesSort(key: "venue" | "lastVisited" | "count" | "rating") {
+  toggleSort(key, venuesSortKey, venuesSortDir, defaultVenuesSortDir);
+}
+
+function toggleSort<K extends string>(
+  key: K,
+  activeKey: { value: K },
+  activeDir: { value: "asc" | "desc" },
+  defaultDir: (key: K) => "asc" | "desc"
+) {
+  if (activeKey.value === key) {
+    activeDir.value = activeDir.value === "asc" ? "desc" : "asc";
+    return;
+  }
+  activeKey.value = key;
+  activeDir.value = defaultDir(key);
+}
+
+function defaultConcertsSortDir(key: "date" | "name" | "venue" | "bands" | "rating") {
+  return key === "name" || key === "venue" ? "asc" : "desc";
+}
+
+function defaultBandsSortDir(key: "band" | "lastSeen" | "count" | "rating" | "venue") {
+  return key === "band" || key === "venue" ? "asc" : "desc";
+}
+
+function defaultActsSortDir(key: "date" | "band" | "venue" | "rating") {
+  return key === "band" || key === "venue" ? "asc" : "desc";
+}
+
+function defaultVenuesSortDir(key: "venue" | "lastVisited" | "count" | "rating") {
+  return key === "venue" ? "asc" : "desc";
+}
+
+function compareNullable<T>(
+  aVal: T | null | undefined,
+  bVal: T | null | undefined,
+  compare: (a: T, b: T) => number
+) {
+  const aMissing = aVal === null || aVal === undefined || aVal === "";
+  const bMissing = bVal === null || bVal === undefined || bVal === "";
+  if (aMissing && bMissing) return 0;
+  if (aMissing) return 1;
+  if (bMissing) return -1;
+  return compare(aVal as T, bVal as T);
+}
 
 function prevPage() {
   if (currentPage.value > 1) {
@@ -660,6 +1002,18 @@ function nextActsPage() {
   }
 }
 
+function prevVenuesPage() {
+  if (venuesPage.value > 1) {
+    venuesPage.value -= 1;
+  }
+}
+
+function nextVenuesPage() {
+  if (venuesPage.value < totalVenuesPages.value) {
+    venuesPage.value += 1;
+  }
+}
+
 async function refreshData() {
   stats.value = await getStats();
   concerts.value = await getLastConcerts(10);
@@ -678,7 +1032,21 @@ async function refreshData() {
   }
 }
 
-onMounted(refreshData);
+onMounted(() => {
+  const saved = localStorage.getItem("concert-tracker:dark-mode");
+  if (saved !== null) {
+    darkMode.value = saved === "true";
+  } else {
+    darkMode.value = window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+  }
+  document.body.classList.toggle("dark", darkMode.value);
+  refreshData();
+});
+
+watch(darkMode, (enabled) => {
+  localStorage.setItem("concert-tracker:dark-mode", String(enabled));
+  document.body.classList.toggle("dark", enabled);
+});
 
 async function openDetails(concertId: number) {
   detailsOpen.value = true;
@@ -974,6 +1342,18 @@ async function handleEventUpdated() {
   flex-wrap: wrap;
 }
 
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.theme-toggle input {
+  accent-color: #111;
+}
+
 @media (max-width: 720px) {
   .header {
     flex-direction: column;
@@ -1037,10 +1417,16 @@ async function handleEventUpdated() {
 }
 
 .pager select {
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 6px 10px;
-  background: #fff;
+  background: var(--card);
+  color: var(--text);
+}
+
+.pager select option {
+  background: var(--card);
+  color: var(--text);
 }
 
 .secondary {
