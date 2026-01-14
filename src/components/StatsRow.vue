@@ -11,7 +11,7 @@
     </button>
 
     <button type="button" class="stat-card clickable" @click="$emit('show-all-acts')">
-      <div class="stat-label">Total Bands seen</div>
+      <div class="stat-label">All live acts</div>
       <div class="stat-value">{{ stats?.actsSeen ?? "-" }}</div>
     </button>
 
@@ -77,5 +77,4 @@ defineEmits<{
   letter-spacing: 0.2px;
 }
 </style>
-
 
