@@ -24,6 +24,14 @@
               </span>
             </button>
           </th>
+          <th :aria-sort="ariaSort('event')">
+            <button class="sort-button" type="button" @click="requestSort('event')">
+              Event
+              <span class="sort-indicator" aria-hidden="true">
+                {{ sortIndicator("event") }}
+              </span>
+            </button>
+          </th>
           <th style="width: 200px" :aria-sort="ariaSort('venue')">
             <button class="sort-button" type="button" @click="requestSort('venue')">
               Venue
@@ -46,6 +54,7 @@
         <tr v-for="entry in entries" :key="entry.event_band_id" class="row">
           <td>{{ formatDate(entry.date) }}</td>
           <td class="name">{{ entry.band_name }}</td>
+          <td>{{ entry.event_name ?? "-" }}</td>
           <td>{{ entry.venue_name ?? "-" }}</td>
           <td>
             <span class="rating">{{ entry.rating ?? "-" }}</span>
@@ -53,7 +62,7 @@
         </tr>
 
         <tr v-if="entries.length === 0">
-          <td colspan="4" class="empty">No bands found.</td>
+          <td colspan="5" class="empty">No bands found.</td>
         </tr>
       </tbody>
     </table>
@@ -69,7 +78,7 @@ const props = withDefaults(
     entries: EventBandSummaryDto[];
     title?: string;
     hint?: string;
-    sortKey?: "date" | "band" | "venue" | "rating";
+    sortKey?: "date" | "band" | "event" | "venue" | "rating";
     sortDir?: "asc" | "desc";
   }>(),
   {
@@ -82,19 +91,19 @@ const props = withDefaults(
 const { entries, title, hint, sortKey, sortDir } = toRefs(props);
 
 const emit = defineEmits<{
-  (e: "sort-change", key: "date" | "band" | "venue" | "rating"): void;
+  (e: "sort-change", key: "date" | "band" | "event" | "venue" | "rating"): void;
 }>();
 
-function requestSort(key: "date" | "band" | "venue" | "rating") {
+function requestSort(key: "date" | "band" | "event" | "venue" | "rating") {
   emit("sort-change", key);
 }
 
-function sortIndicator(key: "date" | "band" | "venue" | "rating") {
+function sortIndicator(key: "date" | "band" | "event" | "venue" | "rating") {
   if (sortKey.value !== key) return "";
   return sortDir.value === "asc" ? "^" : "v";
 }
 
-function ariaSort(key: "date" | "band" | "venue" | "rating") {
+function ariaSort(key: "date" | "band" | "event" | "venue" | "rating") {
   if (sortKey.value !== key) return "none";
   return sortDir.value === "asc" ? "ascending" : "descending";
 }

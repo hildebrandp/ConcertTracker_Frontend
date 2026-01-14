@@ -396,7 +396,7 @@ const actsPageSizeOptions = ["10", "20", "50", "100", "200", "All"] as const;
 const actsPageSize = ref<(typeof actsPageSizeOptions)[number]>("20");
 const actsPage = ref(1);
 const actsSearch = ref("");
-const actsSortKey = ref<"date" | "band" | "venue" | "rating">("date");
+const actsSortKey = ref<"date" | "band" | "event" | "venue" | "rating">("date");
 const actsSortDir = ref<"asc" | "desc">("desc");
 const allVenues = ref<VenueSummaryDto[]>([]);
 const allVenuesOpen = ref(false);
@@ -770,6 +770,13 @@ const sortedActs = computed(() => {
           (x, y) => x.localeCompare(y)
         );
         break;
+      case "event":
+        result = compareNullable(
+          a.event_name,
+          b.event_name,
+          (x, y) => x.localeCompare(y)
+        );
+        break;
       case "venue":
         result = compareNullable(
           a.venue_name,
@@ -915,7 +922,7 @@ function setBandsSort(key: "band" | "lastSeen" | "count" | "rating" | "venue") {
   toggleSort(key, bandsSortKey, bandsSortDir, defaultBandsSortDir);
 }
 
-function setActsSort(key: "date" | "band" | "venue" | "rating") {
+function setActsSort(key: "date" | "band" | "event" | "venue" | "rating") {
   toggleSort(key, actsSortKey, actsSortDir, defaultActsSortDir);
 }
 
@@ -945,8 +952,8 @@ function defaultBandsSortDir(key: "band" | "lastSeen" | "count" | "rating" | "ve
   return key === "band" || key === "venue" ? "asc" : "desc";
 }
 
-function defaultActsSortDir(key: "date" | "band" | "venue" | "rating") {
-  return key === "band" || key === "venue" ? "asc" : "desc";
+function defaultActsSortDir(key: "date" | "band" | "event" | "venue" | "rating") {
+  return key === "band" || key === "event" || key === "venue" ? "asc" : "desc";
 }
 
 function defaultVenuesSortDir(key: "venue" | "lastVisited" | "count" | "rating") {
