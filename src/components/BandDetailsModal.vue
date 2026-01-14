@@ -13,18 +13,6 @@
         <div v-else>
           <div v-if="!isEditing" class="details">
             <div class="detail">
-              <div class="detail-label">Name</div>
-              <div class="detail-value">{{ band.name || "-" }}</div>
-            </div>
-            <div class="detail">
-              <div class="detail-label">Genre</div>
-              <div class="detail-value">{{ band.genre || "-" }}</div>
-            </div>
-            <div class="detail">
-              <div class="detail-label">Origin country</div>
-              <div class="detail-value">{{ band.origin_country || "-" }}</div>
-            </div>
-            <div class="detail">
               <div class="detail-label">Rating</div>
               <div class="detail-value rating-display">
                 <span>{{ band.rating ?? "-" }}</span>
@@ -39,6 +27,14 @@
                   </span>
                 </div>
               </div>
+            </div>
+            <div class="detail">
+              <div class="detail-label">Genre</div>
+              <div class="detail-value">{{ band.genre || "-" }}</div>
+            </div>
+            <div class="detail">
+              <div class="detail-label">Origin country</div>
+              <div class="detail-value">{{ band.origin_country || "-" }}</div>
             </div>
             <div class="detail">
               <div class="detail-label">Plex Link</div>
@@ -407,7 +403,7 @@ function starFillValue(starIndex: number, rating: number) {
 }
 
 .title .name {
-  font-size: 16px;
+  font-size: 25px;
   font-weight: 700;
 }
 

@@ -77,6 +77,7 @@ export interface BandSummaryDto {
 
 export interface EventBandSummaryDto {
   event_band_id: number;
+  event_id: number;
   date: string; // ISO date
   band_name: string;
   event_name?: string | null;

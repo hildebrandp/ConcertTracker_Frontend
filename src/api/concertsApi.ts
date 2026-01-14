@@ -60,6 +60,7 @@ const mockBandSummaries: BandSummaryDto[] = [
 const mockEventBandSummaries: EventBandSummaryDto[] = [
   {
     event_band_id: 1,
+    event_id: 1001,
     date: "2025-12-19",
     band_name: "Heaven Shall Burn",
     event_name: "Heaven Shall Burn + Support",
@@ -68,6 +69,7 @@ const mockEventBandSummaries: EventBandSummaryDto[] = [
   },
   {
     event_band_id: 2,
+    event_id: 1002,
     date: "2025-10-12",
     band_name: "Powerwolf",
     event_name: "Powerwolf",

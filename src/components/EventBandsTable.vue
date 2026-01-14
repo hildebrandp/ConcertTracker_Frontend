@@ -51,7 +51,14 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="entry in entries" :key="entry.event_band_id" class="row">
+        <tr
+          v-for="entry in entries"
+          :key="entry.event_band_id"
+          class="row"
+          role="button"
+          tabindex="0"
+          @click="$emit('select', entry.event_id)"
+        >
           <td>{{ formatDate(entry.date) }}</td>
           <td class="name">{{ entry.band_name }}</td>
           <td>{{ entry.event_name ?? "-" }}</td>
@@ -83,7 +90,7 @@ const props = withDefaults(
   }>(),
   {
     title: "All live acts",
-    hint: "Showing all band appearances",
+    hint: "Click a row to see details",
     sortKey: "date",
     sortDir: "desc",
   }
@@ -92,6 +99,7 @@ const { entries, title, hint, sortKey, sortDir } = toRefs(props);
 
 const emit = defineEmits<{
   (e: "sort-change", key: "date" | "band" | "event" | "venue" | "rating"): void;
+  (e: "select", eventId: number): void;
 }>();
 
 function requestSort(key: "date" | "band" | "event" | "venue" | "rating") {

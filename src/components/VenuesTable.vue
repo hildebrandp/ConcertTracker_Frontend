@@ -81,7 +81,7 @@ const props = withDefaults(
   }>(),
   {
     title: "Visited Venues",
-    hint: "Showing all venues",
+    hint: "Click a row to see details",
     sortKey: "venue",
     sortDir: "asc",
   }

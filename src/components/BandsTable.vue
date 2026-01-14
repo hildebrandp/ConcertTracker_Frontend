@@ -90,7 +90,7 @@ const props = withDefaults(
   }>(),
   {
     title: "Seen Bands",
-    hint: "Showing unique bands",
+    hint: "Click a row to see details",
     sortKey: "band",
     sortDir: "asc",
   }

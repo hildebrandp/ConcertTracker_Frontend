@@ -210,6 +210,7 @@
         :sort-key="actsSortKey"
         :sort-dir="actsSortDir"
         @sort-change="setActsSort"
+        @select="openDetails"
       />
 
       <div v-if="allActsError" class="error">

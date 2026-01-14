@@ -38,7 +38,7 @@
       <div class="modal-body">
         <template v-if="details">
           <div class="section">
-            <div class="section-title">Main Act</div>
+            <div class="section-title">{{ mainActTitle }}</div>
             <ul class="list">
               <li v-for="b in mainActs" :key="b.id" class="band-item">
                 <span>{{ b.name }}</span>
@@ -49,7 +49,7 @@
           </div>
 
           <div class="section">
-            <div class="section-title">Supporters</div>
+            <div class="section-title">{{ supportersTitle }}</div>
             <ul class="list">
               <li v-for="b in supporters" :key="b.id" class="band-item">
                 <span>{{ b.name }}</span>
@@ -123,6 +123,10 @@ const sortedBands = computed(() => {
 
 const mainActs = computed(() => sortedBands.value.filter((b) => b.mainAct));
 const supporters = computed(() => sortedBands.value.filter((b) => !b.mainAct));
+const mainActTitle = computed(() => (mainActs.value.length === 1 ? "Main Act" : "Main Acts"));
+const supportersTitle = computed(() =>
+  supporters.value.length === 1 ? "Supporter" : "Supporters"
+);
 
 function starFillValue(starIndex: number, rating: number) {
   const value = Math.max(0, Math.min(10, rating));
@@ -241,10 +245,21 @@ function starFillValue(starIndex: number, rating: number) {
 }
 
 .band-item {
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+  padding: 4px 0;
+  padding-left: 14px;
+}
+
+.band-item::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: currentColor;
+  opacity: 0.7;
 }
 
 .band-rating {

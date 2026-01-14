@@ -66,6 +66,21 @@ body.dark .rating-hint {
   color: var(--muted);
 }
 
+body.dark .meta,
+body.dark .meta-sep {
+  color: var(--muted);
+}
+
+body.dark .rating,
+body.dark .band-rating {
+  border-color: rgba(255, 255, 255, 0.4);
+  color: var(--text);
+}
+
+body.dark .star-icon {
+  color: rgba(255, 255, 255, 0.45);
+}
+
 body.dark .table th,
 body.dark .table td {
   border-bottom-color: rgba(255, 255, 255, 0.08);
@@ -89,6 +104,10 @@ body.dark .pager-meta {
   color: var(--muted);
 }
 
+body.dark .selected {
+  color: var(--muted);
+}
+
 body.dark .link-button,
 body.dark .detail-value a,
 body.dark .meta-link {
@@ -106,6 +125,12 @@ body.dark .star-clear {
   border-color: var(--border);
   background: var(--card);
   color: var(--text);
+}
+
+body.dark .primary {
+  border-color: #7fb2ff;
+  background: #7fb2ff;
+  color: #0b0b0b;
 }
 
 body.dark .danger {
