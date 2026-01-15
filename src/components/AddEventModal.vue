@@ -411,6 +411,8 @@ import { computed, ref, watch } from "vue";
 import type {
   ConcertBandDto,
   ConcertVenueDto,
+  CreateConcertEventBundleDto,
+  CreateConcertVenueDto,
 } from "../api/types";
 import {
   createConcertEventWithBands,
@@ -655,6 +657,7 @@ function defaultEventDatetime() {
   const dd = String(now.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}T19:00`;
 }
+
 function resetForm() {
   eventName.value = "";
   eventDatetime.value = defaultEventDatetime();
@@ -956,7 +959,7 @@ async function save() {
       }
     }
 
-    const venuePayload = useNewVenue.value
+    const venuePayload: CreateConcertVenueDto | null = useNewVenue.value
       ? {
           name: venueForm.value.name.trim(),
           address: valueOrUndefined(venueForm.value.address),
@@ -1044,27 +1047,33 @@ async function save() {
       }
     }
 
-    const payload = {
-      event: {
-        name: eventName.value.trim(),
-        datetime: toSqlDatetime(eventDatetime.value),
-        rating: numberOrZero(eventRating.value),
-        notes: valueOrEmptyString(eventNotes.value),
-      },
-      bands: bandsPayload,
-      ...(useNewVenue.value
-        ? {
-            venue: Object.fromEntries(
-              Object.entries(venuePayload ?? {}).filter(([, value]) => value !== undefined)
-            ),
-          }
-        : { venueId: selectedVenueId.value }),
+    let payload: CreateConcertEventBundleDto;
+    const eventPayload = {
+      name: eventName.value.trim(),
+      datetime: toSqlDatetime(eventDatetime.value),
+      rating: numberOrZero(eventRating.value),
+      notes: valueOrEmptyString(eventNotes.value),
     };
+
+    if (useNewVenue.value && venuePayload) {
+      payload = {
+        event: eventPayload,
+        bands: bandsPayload,
+        venue: venuePayload,
+      };
+    } else {
+      payload = {
+        event: eventPayload,
+        bands: bandsPayload,
+        venueId: selectedVenueId.value ?? undefined,
+      };
+    }
 
     if (isUpdate.value) {
       if (!props.eventId) {
         throw new Error("Missing event id.");
       }
+
       await updateConcertEventWithBands(props.eventId, payload);
       emit("updated");
     } else {

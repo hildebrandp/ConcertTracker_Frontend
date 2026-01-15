@@ -1273,10 +1273,6 @@ function openCreate() {
   createOpen.value = true;
 }
 
-function closeCreate() {
-  createOpen.value = false;
-}
-
 function openUpdateEvent() {
   if (!selectedDetails.value) return;
   updateEventId.value = selectedDetails.value.id;
